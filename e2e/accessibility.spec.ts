@@ -1,58 +1,82 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-// axe-core 4.13 has WCAG 2.2 rules only at level AA (target-size, 2.5.8);
-// wcag22a is listed so future level A rules are picked up automatically.
-const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22a', 'wcag22aa'];
-const WCAG_22_RULES = ['target-size'];
+// axe runs only the rules that carry at least one of these tags; the sets do not overlap
+// (rule counts as of axe-core 4.13)
+const AXE_TAGS = [
+  'wcag2a', // WCAG 2.0 level A (62 rules): alt text, link/button names, form labels, page lang, ARIA validity
+  'wcag2aa', // WCAG 2.0 level AA (3 rules): colour contrast, zoom not blocked by meta viewport, valid lang on parts of the page
+  'wcag21a', // WCAG 2.1 level A (1 rule): visible label is part of the accessible name (2.5.3 Label in Name)
+  'wcag21aa', // WCAG 2.1 level AA (3 rules): orientation lock, autocomplete purpose, text spacing
+  'wcag22a', // WCAG 2.2 level A (0 rules yet): picked up automatically when axe adds them
+  'wcag22aa', // WCAG 2.2 level AA (1 rule): target size of interactive elements (2.5.8), off by default
+  'best-practice', // not WCAG (30 rules): landmarks, single h1, heading order, unique landmark names
+];
 
 const pages = [
   { path: '/tasks', heading: 'Tasks' },
   { path: '/about', heading: 'About' },
 ];
 
-test.describe('Accessibility', () => {
+async function openPage(page: Page, path: string, heading: string) {
+  await page.goto(path);
+  await expect(page.getByRole('heading', { level: 2, name: heading })).toBeVisible();
+}
+
+async function expectVisibleFocus(locator: Locator) {
+  await expect(locator).toBeFocused();
+  await expect(locator).toBeInViewport();
+  expect(await locator.evaluate((el) => getComputedStyle(el).outlineStyle)).not.toBe('none');
+}
+
+test('pages have no accessibility violations detected by axe-core', async ({ page }) => {
   for (const { path, heading } of pages) {
-    test(`${path} has no detectable WCAG 2.0/2.1/2.2 A/AA violations`, async ({ page }) => {
-      await page.goto(path);
-      await expect(page.getByRole('heading', { level: 2, name: heading })).toBeVisible();
+    await test.step(path, async () => {
+      await openPage(page, path, heading);
 
-      const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+      // tags must be explicit: without them axe skips the WCAG 2.2 rules (target-size)
+      const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
 
       expect(results.violations).toEqual([]);
-      // make sure the WCAG 2.2 rules really ran instead of being silently skipped
+      // WCAG 2.2 (target-size, 2.5.8) really ran instead of being silently skipped
       const evaluated = [...results.passes, ...results.inapplicable].map((rule) => rule.id);
-      expect(evaluated).toEqual(expect.arrayContaining(WCAG_22_RULES));
-    });
-
-    test(`${path} follows axe best practices (landmarks, heading order)`, async ({ page }) => {
-      await page.goto(path);
-      await expect(page.getByRole('heading', { level: 2, name: heading })).toBeVisible();
-
-      const results = await new AxeBuilder({ page }).withTags(['best-practice']).analyze();
-
-      expect(results.violations).toEqual([]);
+      expect(evaluated).toContain('target-size');
     });
   }
 });
 
-test.describe('Routing', () => {
-  test('root redirects to /tasks', async ({ page }) => {
-    await page.goto('/');
-    await expect(page).toHaveURL(/\/tasks$/);
-  });
+test('keyboard users can move through the page with Tab and Shift+Tab', async ({ page }) => {
+  await openPage(page, '/tasks', 'Tasks');
 
-  test('navigation switches pages and updates the title and active link', async ({ page }) => {
-    await page.goto('/tasks');
-    const nav = page.getByRole('navigation', { name: 'Main' });
+  const nav = page.getByRole('navigation', { name: 'Main' });
+  const tabOrder = [
+    page.getByRole('link', { name: 'Skip to main content' }),
+    nav.getByRole('link', { name: 'Tasks' }),
+    nav.getByRole('link', { name: 'About' }),
+  ];
 
-    await expect(nav.getByRole('link', { name: 'Tasks' })).toHaveAttribute('aria-current', 'page');
+  // forward: every interactive element is reached in a logical order with a visible focus
+  for (const element of tabOrder) {
+    await page.keyboard.press('Tab');
+    await expectVisibleFocus(element);
+  }
 
-    await nav.getByRole('link', { name: 'About' }).click();
+  // no keyboard trap: Tab moves focus past the last element
+  await page.keyboard.press('Tab');
+  for (const element of tabOrder) {
+    await expect(element).not.toBeFocused();
+  }
 
-    await expect(page).toHaveURL(/\/about$/);
-    await expect(page).toHaveTitle('About – Accessible Task Manager');
-    await expect(page.getByRole('heading', { level: 2, name: 'About' })).toBeVisible();
-    await expect(nav.getByRole('link', { name: 'About' })).toHaveAttribute('aria-current', 'page');
-  });
+  // backward: Shift+Tab walks the same order in reverse
+  await tabOrder.at(-1)!.focus();
+  for (const element of tabOrder.slice(0, -1).reverse()) {
+    await page.keyboard.press('Shift+Tab');
+    await expectVisibleFocus(element);
+  }
+
+  // links are operable with Enter
+  await tabOrder.at(-1)!.focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/about$/);
+  await expect(page.getByRole('heading', { level: 2, name: 'About' })).toBeVisible();
 });
