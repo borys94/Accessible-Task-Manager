@@ -1,17 +1,6 @@
 import { test, expect, type JSHandle, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-
-// axe runs only the rules that carry at least one of these tags; the sets do not overlap
-// (rule counts as of axe-core 4.13)
-const AXE_TAGS = [
-  'wcag2a', // WCAG 2.0 level A (62 rules): alt text, link/button names, form labels, page lang, ARIA validity
-  'wcag2aa', // WCAG 2.0 level AA (3 rules): colour contrast, zoom not blocked by meta viewport, valid lang on parts of the page
-  'wcag21a', // WCAG 2.1 level A (1 rule): visible label is part of the accessible name (2.5.3 Label in Name)
-  'wcag21aa', // WCAG 2.1 level AA (3 rules): orientation lock, autocomplete purpose, text spacing
-  'wcag22a', // WCAG 2.2 level A (0 rules yet): picked up automatically when axe adds them
-  'wcag22aa', // WCAG 2.2 level AA (1 rule): target size of interactive elements (2.5.8), off by default
-  'best-practice', // not WCAG (30 rules): landmarks, single h1, heading order, unique landmark names
-];
+import { AXE_TAGS } from './helpers/axe';
 
 const pages = [
   { path: '/tasks', heading: 'Tasks' },
@@ -23,11 +12,15 @@ async function openPage(page: Page, path: string, heading: string) {
   await expect(page.getByRole('heading', { level: 2, name: heading })).toBeVisible();
 }
 
-// Expected Tab order on /tasks: skip link, header navigation, then the task buttons.
+// Expected Tab order on /tasks: skip link, header navigation, the add task form, then the task buttons.
 const TAB_ORDER = [
   'Skip to main content',
   'Tasks',
   'About',
+  'Task title (required)',
+  'Description (optional)',
+  'Medium', // a radio group is one Tab stop: the checked radio
+  'Add task',
   'Mark as to do: Add a skip link', // this task starts completed
   'Mark as completed: Check colour contrast',
   'Mark as completed: Test with a screen reader',
@@ -39,9 +32,14 @@ const FOCUSABLE = 'a[href], button, input, select, textarea, summary, [tabindex]
 function getTabbables(page: Page) {
   return page.evaluateHandle(
     (selector) =>
-      Array.from(document.querySelectorAll<HTMLElement>(selector)).filter(
-        (el) => el.tabIndex >= 0 && !(el as HTMLButtonElement).disabled && el.getClientRects().length > 0,
-      ),
+      Array.from(document.querySelectorAll<HTMLElement>(selector)).filter((el) => {
+        // only the checked radio of a group is a Tab stop; the others are reached with arrow keys
+        if (el instanceof HTMLInputElement && el.type === 'radio' && !el.checked && el.name) {
+          const group = el.form?.elements.namedItem(el.name);
+          if (group instanceof RadioNodeList && group.value) return false;
+        }
+        return el.tabIndex >= 0 && !(el as HTMLButtonElement).disabled && el.getClientRects().length > 0;
+      }),
     FOCUSABLE,
   );
 }
@@ -220,9 +218,7 @@ test.describe('Keyboard navigation', () => {
 
     // the header navigation is bypassed: the next Tab lands on the first control in <main>
     await page.keyboard.press('Tab');
-    const firstButton = page.getByRole('main').getByRole('button').first();
-    await expect(firstButton).toBeFocused();
-    await expect(firstButton).toHaveAccessibleName('Mark as to do: Add a skip link');
+    await expect(page.getByRole('main').getByRole('textbox', { name: 'Task title (required)' })).toBeFocused();
   });
 
   test('buttons can be activated with Enter and Space', async ({ page }) => {

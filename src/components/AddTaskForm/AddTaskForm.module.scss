@@ -1,0 +1,84 @@
+.form {
+  display: grid;
+  gap: 1rem;
+  max-width: 32rem;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+}
+
+.heading {
+  margin: 0;
+}
+
+.field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.hint {
+  margin: 0;
+  color: #5f6368;
+  font-size: 0.875rem;
+}
+
+// #767676 border has 4.5:1 against white, above the 3:1 needed for component boundaries (WCAG 1.4.11)
+.input {
+  padding: 0.5rem;
+  border: 1px solid #767676;
+  border-radius: 0.25rem;
+  font: inherit;
+}
+
+// #b3261e on white is 6.5:1
+.error {
+  margin: 0;
+  color: #b3261e;
+  font-weight: 600;
+}
+
+.input[aria-invalid='true'] {
+  border: 2px solid #b3261e;
+}
+
+.fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  margin: 0;
+  padding: 0.5rem 1rem 0.75rem;
+  border: 1px solid #767676;
+  border-radius: 0.25rem;
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+
+  // the default radio is ~13px; 24px meets WCAG 2.5.8 Target Size (Minimum)
+  input {
+    width: 1.5rem;
+    height: 1.5rem;
+    margin: 0;
+  }
+}
+
+.submit {
+  justify-self: start;
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+  border: 2px solid #0b57d0;
+  border-radius: 0.375rem;
+  background: #0b57d0;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.status {
+  margin: 0;
+}
