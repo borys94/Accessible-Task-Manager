@@ -1,0 +1,34 @@
+.list {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  padding: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+}
+
+.title {
+  margin: 0 0 0.25rem;
+}
+
+.description {
+  margin: 0 0 0.5rem;
+}
+
+.status {
+  margin: 0;
+  font-weight: 600;
+}
+
+.completed {
+  color: #146c2e;
+}
+
+.pending {
+  color: #8a4b00;
+}
