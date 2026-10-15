@@ -105,6 +105,15 @@ Omówione i poprawione problemy:
 - Dynamiczne zmiany accessible name a live regions.
 - Kiedy stosować aria-live="polite" i aria-live="assertive".
 
-### Kolejny krok
+## Lekcja 03 — Formularze i dostępna walidacja
 
-Lekcja 03 — temat do ustalenia przed rozpoczęciem nowego czatu.
+- **Data ukończenia:** 16.10.2026
+- **Status:** Zaliczone
+- **WCAG:** 1.3.1 (A), 2.5.3 (A), 3.3.1 (A), 3.3.2 (A), 4.1.2 (A), 4.1.3 (AA)
+- **Implementacja:** Formularz z etykietami, dostępnymi nazwami i opisami oraz obsługą walidacji.
+- **Testowanie:** Playwright, axe-core, asercje dostępnych nazw i opisów, analiza zachowania fokusu.
+- **Code review:** Approved (przegląd statyczny; bez uruchamiania testów).
+- **Test wiedzy:** 7/10 (70%) — niezaliczony.
+- **Test poprawkowy:** 4/5 (80%) — zaliczony.
+- **Zagadnienia do powtórki:** WCAG 2.5.3 Label in Name, `fieldset`/`legend`, ogłaszanie błędów przez czytniki ekranu.
+- **Kolejny krok:** Lekcja 04 — temat do ustalenia na podstawie planu nauki i aktualnego stanu repozytorium.
