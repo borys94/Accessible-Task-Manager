@@ -1,1 +1,1 @@
-{"root":["./vite.config.ts","./playwright.config.ts","./e2e/accessibility.spec.ts"],"version":"5.8.3"}
+{"root":["./vite.config.ts","./playwright.config.ts","./e2e/accessibility.spec.ts","./e2e/initial-view.spec.ts"],"version":"5.8.3"}
