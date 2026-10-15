@@ -61,8 +61,50 @@ Omówione i poprawione problemy:
 - Ograniczenia axe-core i konieczność testów manualnych.
 - Testowanie fokusu oraz dynamicznych stanów interfejsu.
 
-### Kolejna lekcja
+## Lekcja 02 — Nawigacja klawiaturą i zarządzanie fokusem
 
-**Lekcja 02 — Nawigacja klawiaturą i kolejność fokusu.**
+- **Data:** 2026-10-15
+- **Status:** Zaliczona
+- **Pull Request:** [PR #2](https://github.com/borys94/Accessible-Task-Manager/pull/2)
+- **Code review:** Approved
+- **Test wiedzy:** 8,5/10 (85%) — zaliczony, próg 80%
 
-Status: nierozpoczęta.
+### Poznane kryteria WCAG 2.2
+
+- 2.1.1 Keyboard (A)
+- 2.1.2 No Keyboard Trap (A)
+- 2.4.1 Bypass Blocks (A)
+- 2.4.3 Focus Order (A)
+- 2.4.7 Focus Visible (AA)
+- 2.4.11 Focus Not Obscured (Minimum) (AA)
+
+### Zaimplementowane funkcjonalności
+
+- Nawigacja klawiaturą po elementach interaktywnych.
+- Skip link umożliwiający pominięcie powtarzalnej nawigacji.
+- Widoczny wskaźnik fokusu.
+- Natywne przyciski obsługiwane klawiszami Enter i Space.
+- Dostępne nazwy przycisków akcji na zadaniach.
+
+### Testowanie
+
+- Playwright: kolejność fokusu, Tab i Shift+Tab, skip link, widoczność fokusu, aktywacja przycisków.
+- @axe-core/playwright: automatyczna kontrola dostępności.
+- Testy manualne: klawiatura i czytnik ekranu.
+- Zgłoszone wyniki testów: pozytywne.
+
+### Code review
+
+- Zidentyfikowane wcześniej problemy zostały poprawione.
+- Pozostała nieblokująca sugestia dotycząca stabilności testowania widoczności fokusu za pomocą porównywania screenshotów.
+- Werdykt: Approved.
+
+### Zagadnienia do powtórki
+
+- Weryfikacja skip linków i rzeczywistego punktu nawigacji.
+- Dynamiczne zmiany accessible name a live regions.
+- Kiedy stosować aria-live="polite" i aria-live="assertive".
+
+### Kolejny krok
+
+Lekcja 03 — temat do ustalenia przed rozpoczęciem nowego czatu.
