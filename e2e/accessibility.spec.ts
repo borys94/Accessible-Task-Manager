@@ -1,4 +1,4 @@
-import { test, expect, type Locator, type Page } from '@playwright/test';
+import { test, expect, type JSHandle, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 // axe runs only the rules that carry at least one of these tags; the sets do not overlap
@@ -35,53 +35,78 @@ const TAB_ORDER = [
 
 const FOCUSABLE = 'a[href], button, input, select, textarea, summary, [tabindex], [contenteditable="true"]';
 
-/** Label of the focused element: aria-label or text (enough to tell our links and buttons apart). */
-async function focusedLabel(page: Page) {
-  return page.evaluate(() => {
-    const el = document.activeElement;
-    return el?.getAttribute('aria-label') ?? el?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
-  });
+/** Every element that should be a Tab stop, in DOM (reading) order. */
+function getTabbables(page: Page) {
+  return page.evaluateHandle(
+    (selector) =>
+      Array.from(document.querySelectorAll<HTMLElement>(selector)).filter(
+        (el) => el.tabIndex >= 0 && !(el as HTMLButtonElement).disabled && el.getClientRects().length > 0,
+      ),
+    FOCUSABLE,
+  );
 }
 
-/** Presses Tab `count` times and returns the label of every element that got focus. */
-async function tabThrough(page: Page, count: number) {
-  const labels: string[] = [];
+/** Position of the focused element in `tabbables` (-1 = focus is on something outside the list). */
+function positionOfFocus(tabbables: JSHandle<HTMLElement[]>) {
+  return tabbables.evaluate((list) => list.indexOf(document.activeElement as HTMLElement));
+}
+
+/**
+ * Presses `key` `count` times and returns the position of the focused element after every press.
+ * Elements are compared by identity, so two controls with the same name cannot be mistaken for each other.
+ */
+async function pressAndTrack(page: Page, tabbables: JSHandle<HTMLElement[]>, key: string, count: number) {
+  const positions: number[] = [];
   for (let i = 0; i < count; i++) {
-    await page.keyboard.press('Tab');
-    labels.push(await focusedLabel(page));
+    await page.keyboard.press(key);
+    positions.push(await positionOfFocus(tabbables));
   }
-  return labels;
+  return positions;
 }
 
-async function expectVisibleFocusIndicator(locator: Locator) {
-  await expect(locator).toBeFocused();
-  const { style, width } = await locator.evaluate((el) => {
-    const css = getComputedStyle(el);
-    return { style: css.outlineStyle, width: parseFloat(css.outlineWidth) };
+/** Area around the focused element in page coordinates, with room for an outline, offset or shadow. */
+async function focusedRegion(page: Page) {
+  return page.evaluate(() => {
+    const rect = document.activeElement!.getBoundingClientRect();
+    const padding = 8;
+    return {
+      x: Math.max(0, rect.left + window.scrollX - padding),
+      y: Math.max(0, rect.top + window.scrollY - padding),
+      width: rect.width + padding * 2,
+      height: rect.height + padding * 2,
+    };
   });
-  expect(style).not.toBe('none');
-  expect(width).toBeGreaterThanOrEqual(2);
 }
 
-/** WCAG 2.4.11: the focused element must not be entirely hidden by other content (e.g. a sticky header). */
+/**
+ * Regression guard for WCAG 2.4.11 Focus Not Obscured (Minimum): the focused element is in the
+ * viewport and at least part of it is not covered by other content (e.g. a sticky header).
+ * It samples a grid of points with elementFromPoint, so it is a heuristic, not a full audit:
+ * irregular or semi-transparent overlays still need the manual check in docs/manual-accessibility-checks.md.
+ */
 async function expectFocusNotObscured(page: Page) {
-  const visible = await page.evaluate(() => {
-    const el = document.activeElement as HTMLElement;
+  const focused = page.locator(':focus');
+  await expect(focused).toBeInViewport();
+
+  const { visiblePoints, element } = await focused.evaluate((el) => {
     const rect = el.getBoundingClientRect();
-    const points = [
-      [rect.left + rect.width / 2, rect.top + rect.height / 2],
-      [rect.left + 2, rect.top + 2],
-      [rect.right - 2, rect.top + 2],
-      [rect.left + 2, rect.bottom - 2],
-      [rect.right - 2, rect.bottom - 2],
-    ];
-    // at least one point of the element is on screen and not covered by another element
-    return points.some(([x, y]) => {
-      const top = document.elementFromPoint(x, y);
-      return top !== null && (top === el || el.contains(top));
-    });
+    const left = Math.max(rect.left, 0);
+    const right = Math.min(rect.right, window.innerWidth);
+    const top = Math.max(rect.top, 0);
+    const bottom = Math.min(rect.bottom, window.innerHeight);
+    const steps = 5;
+    let visible = 0;
+    for (let i = 0; i < steps; i++) {
+      for (let j = 0; j < steps; j++) {
+        const x = left + ((right - left) * (i + 0.5)) / steps;
+        const y = top + ((bottom - top) * (j + 0.5)) / steps;
+        const hit = document.elementFromPoint(x, y);
+        if (hit && (hit === el || el.contains(hit))) visible++;
+      }
+    }
+    return { visiblePoints: visible, element: el.outerHTML.slice(0, 80) };
   });
-  expect(visible, `focused element "${await focusedLabel(page)}" is obscured`).toBe(true);
+  expect(visiblePoints, `focused element is completely obscured: ${element}`).toBeGreaterThan(0);
 }
 
 test('pages have no accessibility violations detected by axe-core', async ({ page }) => {
@@ -105,44 +130,58 @@ test.describe('Keyboard navigation', () => {
     await openPage(page, '/tasks', 'Tasks');
   });
 
-  test('every interactive element can be reached with Tab', async ({ page }) => {
-    const reached = await tabThrough(page, TAB_ORDER.length);
+  test('focus order: every interactive element is reached exactly once, in reading order', async ({ page }) => {
+    const tabbables = await getTabbables(page);
+    const count = await tabbables.evaluate((list) => list.length);
+    expect(count).toBe(TAB_ORDER.length);
+    const readingOrder = [...Array(count).keys()];
 
-    const interactive = await page
-      .locator(FOCUSABLE)
-      .evaluateAll((els) =>
-        els
-          .filter((el) => el.getAttribute('tabindex') !== '-1' && !(el as HTMLButtonElement).disabled)
-          .map((el) => el.getAttribute('aria-label') ?? el.textContent?.replace(/\s+/g, ' ').trim() ?? ''),
-      );
-
-    expect(interactive).toHaveLength(TAB_ORDER.length);
-    expect(new Set(reached)).toEqual(new Set(interactive));
-  });
-
-  test('focus order is logical: follows the reading order, forwards and backwards', async ({ page }) => {
-    expect(await tabThrough(page, TAB_ORDER.length)).toEqual(TAB_ORDER);
-
-    // Shift+Tab walks the same order in reverse
-    const backwards: string[] = [];
-    for (let i = 0; i < TAB_ORDER.length - 1; i++) {
-      await page.keyboard.press('Shift+Tab');
-      backwards.push(await focusedLabel(page));
+    // forwards: the full sequence must match the DOM order - nothing skipped, repeated or reordered -
+    // and each focused element has the expected name from the accessibility tree
+    const forwards: number[] = [];
+    for (const name of TAB_ORDER) {
+      await page.keyboard.press('Tab');
+      forwards.push(await positionOfFocus(tabbables));
+      await expect(page.locator(':focus')).toHaveAccessibleName(name);
     }
-    expect(backwards).toEqual(TAB_ORDER.slice(0, -1).reverse());
+    expect(forwards).toEqual(readingOrder);
 
-    // no keyboard trap: after the last element focus leaves the page content
-    await page.getByRole('button', { name: TAB_ORDER.at(-1) }).focus();
-    await page.keyboard.press('Tab');
-    expect(TAB_ORDER).not.toContain(await focusedLabel(page));
+    // backwards: Shift+Tab walks the same sequence in reverse
+    expect(await pressAndTrack(page, tabbables, 'Shift+Tab', count - 1)).toEqual(readingOrder.slice(0, -1).reverse());
+
+    // no keyboard trap: Tab from the last element leaves the page content
+    await tabbables.evaluate((list) => list.at(-1)!.focus());
+    expect(await pressAndTrack(page, tabbables, 'Tab', 1)).toEqual([-1]);
   });
 
-  test('every focused element has a clearly visible focus indicator', async ({ page }) => {
-    for (const label of TAB_ORDER) {
+  test('focus style regression: focused elements keep the project :focus-visible outline', async ({ page }) => {
+    // Guards the style chosen in src/index.css. It does not prove the indicator is perceivable;
+    // see the next test and the manual contrast check in docs/manual-accessibility-checks.md.
+    for (const name of TAB_ORDER) {
       await page.keyboard.press('Tab');
       const focused = page.locator(':focus');
-      await expect(focused).toHaveAccessibleName(label);
-      await expectVisibleFocusIndicator(focused);
+      await expect(focused).toHaveAccessibleName(name);
+      await expect(focused).toHaveCSS('outline-style', 'solid');
+      await expect(focused).toHaveCSS('outline-width', '3px');
+    }
+  });
+
+  test('focus indicator is visible: focusing an element changes how it looks', async ({ page }) => {
+    // Implementation-agnostic: compares pixels around each element with and without focus,
+    // so an outline, box-shadow, border or background change all count as an indicator.
+    const shots: { name: string; clip: Awaited<ReturnType<typeof focusedRegion>>; focused: Buffer }[] = [];
+    for (const name of TAB_ORDER) {
+      await page.keyboard.press('Tab');
+      await expect(page.locator(':focus')).toHaveAccessibleName(name);
+      const clip = await focusedRegion(page);
+      shots.push({ name, clip, focused: await page.screenshot({ clip, fullPage: true }) });
+    }
+
+    await page.evaluate(() => (document.activeElement as HTMLElement).blur());
+
+    for (const { name, clip, focused } of shots) {
+      const unfocused = await page.screenshot({ clip, fullPage: true });
+      expect(focused.equals(unfocused), `focus on "${name}" causes no visible change`).toBe(false);
     }
   });
 
@@ -175,7 +214,6 @@ test.describe('Keyboard navigation', () => {
     await page.keyboard.press('Tab');
     await expect(skipLink).toBeFocused();
     await expect(skipLink).toBeInViewport();
-    await expectVisibleFocusIndicator(skipLink);
 
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/#main-content$/);
