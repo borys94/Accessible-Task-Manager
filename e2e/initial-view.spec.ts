@@ -61,28 +61,3 @@ test.describe('Initial view', () => {
     expect(results.violations).toEqual([]);
   });
 });
-
-test.describe('Skip link (keyboard)', () => {
-  test('is the first Tab stop, becomes visible and lets keyboard users bypass the header', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.getByRole('heading', { level: 2, name: 'Tasks' })).toBeVisible();
-
-    const skipLink = page.getByRole('link', { name: 'Skip to main content' });
-    await expect(skipLink).not.toBeInViewport();
-
-    await page.keyboard.press('Tab');
-    await expect(skipLink).toBeFocused();
-    await expect(skipLink).toBeInViewport();
-
-    await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/#main-content$/);
-
-    // <main> is not focusable, so the browser only moves the sequential focus
-    // navigation starting point there. The next Tab must therefore not land on the
-    // header navigation, which is the next Tab stop when the skip link is not used.
-    await page.keyboard.press('Tab');
-    const nav = page.getByRole('navigation', { name: 'Main' });
-    await expect(nav.getByRole('link', { name: 'Tasks' })).not.toBeFocused();
-    await expect(nav.getByRole('link', { name: 'About' })).not.toBeFocused();
-  });
-});

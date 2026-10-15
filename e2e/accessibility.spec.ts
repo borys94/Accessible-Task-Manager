@@ -23,10 +23,65 @@ async function openPage(page: Page, path: string, heading: string) {
   await expect(page.getByRole('heading', { level: 2, name: heading })).toBeVisible();
 }
 
-async function expectVisibleFocus(locator: Locator) {
+// Expected Tab order on /tasks: skip link, header navigation, then the task buttons.
+const TAB_ORDER = [
+  'Skip to main content',
+  'Tasks',
+  'About',
+  'Mark as to do: Add a skip link', // this task starts completed
+  'Mark as completed: Check colour contrast',
+  'Mark as completed: Test with a screen reader',
+];
+
+const FOCUSABLE = 'a[href], button, input, select, textarea, summary, [tabindex], [contenteditable="true"]';
+
+/** Label of the focused element: aria-label or text (enough to tell our links and buttons apart). */
+async function focusedLabel(page: Page) {
+  return page.evaluate(() => {
+    const el = document.activeElement;
+    return el?.getAttribute('aria-label') ?? el?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+  });
+}
+
+/** Presses Tab `count` times and returns the label of every element that got focus. */
+async function tabThrough(page: Page, count: number) {
+  const labels: string[] = [];
+  for (let i = 0; i < count; i++) {
+    await page.keyboard.press('Tab');
+    labels.push(await focusedLabel(page));
+  }
+  return labels;
+}
+
+async function expectVisibleFocusIndicator(locator: Locator) {
   await expect(locator).toBeFocused();
-  await expect(locator).toBeInViewport();
-  expect(await locator.evaluate((el) => getComputedStyle(el).outlineStyle)).not.toBe('none');
+  const { style, width } = await locator.evaluate((el) => {
+    const css = getComputedStyle(el);
+    return { style: css.outlineStyle, width: parseFloat(css.outlineWidth) };
+  });
+  expect(style).not.toBe('none');
+  expect(width).toBeGreaterThanOrEqual(2);
+}
+
+/** WCAG 2.4.11: the focused element must not be entirely hidden by other content (e.g. a sticky header). */
+async function expectFocusNotObscured(page: Page) {
+  const visible = await page.evaluate(() => {
+    const el = document.activeElement as HTMLElement;
+    const rect = el.getBoundingClientRect();
+    const points = [
+      [rect.left + rect.width / 2, rect.top + rect.height / 2],
+      [rect.left + 2, rect.top + 2],
+      [rect.right - 2, rect.top + 2],
+      [rect.left + 2, rect.bottom - 2],
+      [rect.right - 2, rect.bottom - 2],
+    ];
+    // at least one point of the element is on screen and not covered by another element
+    return points.some(([x, y]) => {
+      const top = document.elementFromPoint(x, y);
+      return top !== null && (top === el || el.contains(top));
+    });
+  });
+  expect(visible, `focused element "${await focusedLabel(page)}" is obscured`).toBe(true);
 }
 
 test('pages have no accessibility violations detected by axe-core', async ({ page }) => {
@@ -45,38 +100,121 @@ test('pages have no accessibility violations detected by axe-core', async ({ pag
   }
 });
 
-test('keyboard users can move through the page with Tab and Shift+Tab', async ({ page }) => {
-  await openPage(page, '/tasks', 'Tasks');
+test.describe('Keyboard navigation', () => {
+  test.beforeEach(async ({ page }) => {
+    await openPage(page, '/tasks', 'Tasks');
+  });
 
-  const nav = page.getByRole('navigation', { name: 'Main' });
-  const tabOrder = [
-    page.getByRole('link', { name: 'Skip to main content' }),
-    nav.getByRole('link', { name: 'Tasks' }),
-    nav.getByRole('link', { name: 'About' }),
-  ];
+  test('every interactive element can be reached with Tab', async ({ page }) => {
+    const reached = await tabThrough(page, TAB_ORDER.length);
 
-  // forward: every interactive element is reached in a logical order with a visible focus
-  for (const element of tabOrder) {
+    const interactive = await page
+      .locator(FOCUSABLE)
+      .evaluateAll((els) =>
+        els
+          .filter((el) => el.getAttribute('tabindex') !== '-1' && !(el as HTMLButtonElement).disabled)
+          .map((el) => el.getAttribute('aria-label') ?? el.textContent?.replace(/\s+/g, ' ').trim() ?? ''),
+      );
+
+    expect(interactive).toHaveLength(TAB_ORDER.length);
+    expect(new Set(reached)).toEqual(new Set(interactive));
+  });
+
+  test('focus order is logical: follows the reading order, forwards and backwards', async ({ page }) => {
+    expect(await tabThrough(page, TAB_ORDER.length)).toEqual(TAB_ORDER);
+
+    // Shift+Tab walks the same order in reverse
+    const backwards: string[] = [];
+    for (let i = 0; i < TAB_ORDER.length - 1; i++) {
+      await page.keyboard.press('Shift+Tab');
+      backwards.push(await focusedLabel(page));
+    }
+    expect(backwards).toEqual(TAB_ORDER.slice(0, -1).reverse());
+
+    // no keyboard trap: after the last element focus leaves the page content
+    await page.getByRole('button', { name: TAB_ORDER.at(-1) }).focus();
     await page.keyboard.press('Tab');
-    await expectVisibleFocus(element);
-  }
+    expect(TAB_ORDER).not.toContain(await focusedLabel(page));
+  });
 
-  // no keyboard trap: Tab moves focus past the last element
-  await page.keyboard.press('Tab');
-  for (const element of tabOrder) {
-    await expect(element).not.toBeFocused();
-  }
+  test('every focused element has a clearly visible focus indicator', async ({ page }) => {
+    for (const label of TAB_ORDER) {
+      await page.keyboard.press('Tab');
+      const focused = page.locator(':focus');
+      await expect(focused).toHaveAccessibleName(label);
+      await expectVisibleFocusIndicator(focused);
+    }
+  });
 
-  // backward: Shift+Tab walks the same order in reverse
-  await tabOrder.at(-1)!.focus();
-  for (const element of tabOrder.slice(0, -1).reverse()) {
-    await page.keyboard.press('Shift+Tab');
-    await expectVisibleFocus(element);
-  }
+  test('focused elements are not hidden behind a sticky header or other content', async ({ page }) => {
+    // a short viewport forces scrolling, which is when sticky headers cover content
+    await page.setViewportSize({ width: 1280, height: 400 });
 
-  // links are operable with Enter
-  await tabOrder.at(-1)!.focus();
-  await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/about$/);
-  await expect(page.getByRole('heading', { level: 2, name: 'About' })).toBeVisible();
+    for (let i = 0; i < TAB_ORDER.length; i++) {
+      await page.keyboard.press('Tab');
+      await expectFocusNotObscured(page);
+    }
+    for (let i = 0; i < TAB_ORDER.length - 1; i++) {
+      await page.keyboard.press('Shift+Tab');
+      await expectFocusNotObscured(page);
+    }
+  });
+
+  test('no element uses a positive tabindex', async ({ page }) => {
+    const positive = await page
+      .locator('[tabindex]')
+      .evaluateAll((els) => els.filter((el) => Number(el.getAttribute('tabindex')) > 0).map((el) => el.outerHTML));
+
+    expect(positive).toEqual([]);
+  });
+
+  test('skip link is the first Tab stop and moves keyboard users to the main content', async ({ page }) => {
+    const skipLink = page.getByRole('link', { name: 'Skip to main content' });
+    await expect(skipLink).not.toBeInViewport();
+
+    await page.keyboard.press('Tab');
+    await expect(skipLink).toBeFocused();
+    await expect(skipLink).toBeInViewport();
+    await expectVisibleFocusIndicator(skipLink);
+
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/#main-content$/);
+
+    // the header navigation is bypassed: the next Tab lands on the first control in <main>
+    await page.keyboard.press('Tab');
+    const firstButton = page.getByRole('main').getByRole('button').first();
+    await expect(firstButton).toBeFocused();
+    await expect(firstButton).toHaveAccessibleName('Mark as to do: Add a skip link');
+  });
+
+  test('buttons can be activated with Enter and Space', async ({ page }) => {
+    const task = page.getByRole('listitem').filter({ hasText: 'Check colour contrast' });
+    const button = task.getByRole('button');
+
+    await expect(button).toHaveAccessibleName('Mark as completed: Check colour contrast');
+    await expect(task).toContainText('Status: To do');
+
+    await button.focus();
+    await page.keyboard.press('Enter');
+    await expect(button).toHaveText('Mark as to do');
+    await expect(button).toHaveAccessibleName('Mark as to do: Check colour contrast');
+    await expect(task).toContainText('Status: Completed');
+    await expect(button).toBeFocused();
+
+    await page.keyboard.press('Space');
+    await expect(button).toHaveText('Mark as completed');
+    await expect(button).toHaveAccessibleName('Mark as completed: Check colour contrast');
+    await expect(task).toContainText('Status: To do');
+    await expect(button).toBeFocused();
+  });
+
+  test('view has no WCAG 2.2 A/AA violations after keyboard interaction', async ({ page }) => {
+    await page.getByRole('button', { name: 'Mark as completed: Check colour contrast' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator(':focus')).toHaveAccessibleName('Mark as to do: Check colour contrast');
+
+    const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
+
+    expect(results.violations).toEqual([]);
+  });
 });
