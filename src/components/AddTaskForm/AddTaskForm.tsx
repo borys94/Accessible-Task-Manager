@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from 'react';
+import { useId, useRef, useState, type FormEvent } from 'react';
 import type { NewTask, Priority } from '../../types/task';
 import styles from './AddTaskForm.module.scss';
 
@@ -19,7 +19,10 @@ function AddTaskForm({ onAdd }: AddTaskFormProps) {
   const headingId = `${id}-heading`;
   const titleId = `${id}-title`;
   const titleHintId = `${id}-title-hint`;
+  const titleErrorId = `${id}-title-error`;
   const descriptionId = `${id}-description`;
+  const titleRef = useRef<HTMLInputElement>(null);
+  const [titleError, setTitleError] = useState('');
   const [status, setStatus] = useState('');
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -28,11 +31,13 @@ function AddTaskForm({ onAdd }: AddTaskFormProps) {
     const data = new FormData(form);
     const title = String(data.get('title')).trim();
 
-    // `required` accepts a title made of spaces only; clear it so the browser shows its "required" message
+    // Native validation bubbles are not reliably announced by screen readers, so the form uses
+    // noValidate and shows its own error. Moving focus to the field makes the screen reader read
+    // its name, "invalid" (aria-invalid) and the error text (aria-describedby) together.
     if (!title) {
-      const titleInput = form.elements.namedItem('title') as HTMLInputElement;
-      titleInput.value = '';
-      form.reportValidity();
+      setTitleError('Enter a task title.');
+      setStatus('');
+      titleRef.current?.focus();
       return;
     }
 
@@ -42,26 +47,30 @@ function AddTaskForm({ onAdd }: AddTaskFormProps) {
       priority: data.get('priority') as Priority,
     });
     form.reset();
+    setTitleError('');
     setStatus(`Task "${title}" added.`);
   };
 
   return (
     // aria-labelledby turns the form into a named "form" landmark
-    <form className={styles.form} aria-labelledby={headingId} onSubmit={handleSubmit}>
+    <form className={styles.form} aria-labelledby={headingId} onSubmit={handleSubmit} noValidate>
       <h3 id={headingId} className={styles.heading}>
         Add a task
       </h3>
 
       <div className={styles.field}>
-        {/* "(required)" is visible text, so sighted users get the same information as the
-            `required` attribute gives assistive technologies */}
         <label htmlFor={titleId}>Task title (required)</label>
-        {/* the hint sits between label and input, so it is read before typing starts;
-            aria-describedby makes it the field's accessible description */}
         <p id={titleHintId} className={styles.hint}>
           Maximum {TITLE_MAX_LENGTH} characters.
         </p>
+        {/* "Error:" prefix: the error is not conveyed by colour alone (WCAG 1.4.1) */}
+        {titleError && (
+          <p id={titleErrorId} className={styles.error}>
+            Error: {titleError}
+          </p>
+        )}
         <input
+          ref={titleRef}
           id={titleId}
           name="title"
           type="text"
@@ -69,7 +78,8 @@ function AddTaskForm({ onAdd }: AddTaskFormProps) {
           required
           maxLength={TITLE_MAX_LENGTH}
           autoComplete="off"
-          aria-describedby={titleHintId}
+          aria-invalid={titleError ? true : undefined}
+          aria-describedby={titleError ? `${titleErrorId} ${titleHintId}` : titleHintId}
         />
       </div>
 

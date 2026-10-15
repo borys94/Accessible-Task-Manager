@@ -133,10 +133,63 @@ test.describe('Add task form: keyboard only', () => {
       await page.keyboard.press('Enter');
       await expect(taskItems(page)).toHaveCount(3);
       await expect(title).toBeFocused();
-      await expect(title).toHaveJSProperty('validity.valueMissing', true);
     }
   });
+});
 
+// What a screen reader announces is built from the accessibility tree: name, state (aria-invalid)
+// and description (aria-describedby). Focus is moved to the field, so all three are read at once.
+// A native validation bubble is not part of that tree, which is why the form shows its own error.
+test.describe('Add task form: error message for screen readers', () => {
+  const ERROR = 'Error: Enter a task title.';
+
+  for (const { name, value, submitWith } of [
+    { name: 'an empty title, submitted with the button', value: '', submitWith: 'button' },
+    { name: 'a title of spaces only, submitted with Enter in the field', value: '   ', submitWith: 'field' },
+  ] as const) {
+    test(`${name}: focus moves to the field, which is marked invalid and described by the error`, async ({
+      page,
+    }) => {
+      const { form, title, submit } = getForm(page);
+      await title.fill(value);
+      await (submitWith === 'button' ? submit : title).press('Enter');
+
+      await expect(title).toBeFocused();
+      await expect(title).toHaveAttribute('aria-invalid', 'true');
+      // the error comes first, then the hint: the most important information is read first
+      await expect(title).toHaveAccessibleDescription(`${ERROR} Maximum 100 characters.`);
+      // the same text is visible, so sighted users get the same information
+      await expect(form.getByText(ERROR)).toBeVisible();
+      await expect(taskItems(page)).toHaveCount(3);
+    });
+  }
+
+  test('the error state has no axe-core violations', async ({ page }) => {
+    const { title, submit } = getForm(page);
+    await submit.press('Enter');
+    await expect(title).toHaveAttribute('aria-invalid', 'true');
+
+    const results = await new AxeBuilder({ page }).include('form').withTags(AXE_TAGS).analyze();
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test('the error is removed once a valid task is added', async ({ page }) => {
+    const { form, title, status } = getForm(page);
+    await title.press('Enter');
+    await expect(title).toHaveAttribute('aria-invalid', 'true');
+
+    await title.fill('Fixed title');
+    await title.press('Enter');
+
+    await expect(status).toHaveText('Task "Fixed title" added.');
+    await expect(title).not.toHaveAttribute('aria-invalid');
+    await expect(title).toHaveAccessibleDescription('Maximum 100 characters.');
+    await expect(form.getByText(ERROR)).toHaveCount(0);
+  });
+});
+
+test.describe('Add task form: limits', () => {
   test('the title cannot be longer than 100 characters', async ({ page }) => {
     const { title } = getForm(page);
     await title.focus();

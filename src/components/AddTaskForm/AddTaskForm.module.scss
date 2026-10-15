@@ -31,6 +31,17 @@
   font: inherit;
 }
 
+// #b3261e on white is 6.5:1
+.error {
+  margin: 0;
+  color: #b3261e;
+  font-weight: 600;
+}
+
+.input[aria-invalid='true'] {
+  border: 2px solid #b3261e;
+}
+
 .fieldset {
   display: flex;
   flex-wrap: wrap;
