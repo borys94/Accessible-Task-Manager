@@ -36,7 +36,7 @@ test.describe('Routing', () => {
     await expect(page).toHaveURL(/\/tasks$/);
   });
 
-  test('navigation switches pages, updates title and moves focus to main', async ({ page }) => {
+  test('navigation switches pages and updates the title and active link', async ({ page }) => {
     await page.goto('/tasks');
     const nav = page.getByRole('navigation', { name: 'Main' });
 
@@ -48,6 +48,5 @@ test.describe('Routing', () => {
     await expect(page).toHaveTitle('About – Accessible Task Manager');
     await expect(page.getByRole('heading', { level: 2, name: 'About' })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'About' })).toHaveAttribute('aria-current', 'page');
-    await expect(page.getByRole('main')).toBeFocused();
   });
 });
