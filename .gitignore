@@ -9,3 +9,6 @@ test-results
 /blob-report
 /playwright/.cache
 .vite
+tsconfig.app.tsbuildinfo
+# the project uses yarn (yarn.lock); a lockfile from an accidental npm install must not be committed
+package-lock.json

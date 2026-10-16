@@ -5,18 +5,20 @@ React + TypeScript (Vite) z testami jednostkowymi w Vitest i React Testing Libra
 ## Wymagania
 
 - Node.js 20+
+- Yarn 1 (classic) — projekt używa wyłącznie `yarn.lock`
 
 ## Skrypty
 
 ```bash
-npm install          # instalacja zależności
-npm run dev          # serwer deweloperski (Vite)
-npm run build        # typecheck + build produkcyjny
-npm test             # testy jednostkowe (Vitest)
-npm run test:watch   # testy w trybie watch
-npm run test:coverage # raport pokrycia
-npm run test:e2e     # testy Playwright
-npm run test:a11y    # testy dostępności (axe-core)
+yarn install         # instalacja zależności
+yarn dev             # serwer deweloperski (Vite)
+yarn build           # typecheck + build produkcyjny
+yarn typecheck       # sprawdzenie typów
+yarn test            # testy jednostkowe (Vitest)
+yarn test:watch      # testy w trybie watch
+yarn test:coverage   # raport pokrycia
+yarn test:e2e        # testy Playwright
+yarn test:a11y       # testy dostępności (axe-core)
 ```
 
 ## Struktura
