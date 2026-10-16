@@ -117,3 +117,48 @@ Omówione i poprawione problemy:
 - **Test poprawkowy:** 4/5 (80%) — zaliczony.
 - **Zagadnienia do powtórki:** WCAG 2.5.3 Label in Name, `fieldset`/`legend`, ogłaszanie błędów przez czytniki ekranu.
 - **Kolejny krok:** Lekcja 04 — temat do ustalenia na podstawie planu nauki i aktualnego stanu repozytorium.
+
+### Lekcja 04 — Walidacja formularza i dostępne komunikaty błędów
+
+- **Data:** 2026-10-16
+- **Status:** Completed
+- **Pull Request:** [#4](https://github.com/borys94/Accessible-Task-Manager/pull/4)
+- **Code review:** Approved
+
+**Poznane kryteria WCAG 2.2:**
+- 3.3.1 Error Identification (A)
+- 3.3.2 Labels or Instructions (A)
+- 3.3.3 Error Suggestion (AA)
+- 4.1.3 Status Messages (AA)
+- 2.4.3 Focus Order (A) — zastosowanie przy obsłudze błędów
+
+**Zaimplementowane funkcjonalności:**
+- Walidacja wymaganego tytułu zadania i minimalnej długości.
+- Dostępne komunikaty błędów powiązane przez `aria-describedby`.
+- Dynamiczne zarządzanie `aria-invalid`.
+- Przenoszenie fokusu po nieudanej walidacji.
+- Warunkowe ogłaszanie błędów przez `role="alert"`.
+- Komunikat sukcesu przez `role="status"`.
+
+**Testowanie:**
+- Testy E2E Playwright.
+- Audyty axe-core.
+- Testy komponentowe Vitest, Testing Library i jest-axe.
+- Manualny test M2: błąd ogłoszony jednokrotnie przez czytnik ekranu.
+
+**Wykryte i naprawione problemy:**
+- Fokus przenoszony przed aktualizacją DOM.
+- Ryzyko nieogłoszenia błędu, gdy fokus pozostaje na inpucie.
+- Ryzyko podwójnego ogłoszenia błędu.
+
+**Test wiedzy:**
+- Quiz główny: 74% — niezaliczony.
+- Pierwszy test poprawkowy: 60% — niezaliczony.
+- Drugi test poprawkowy: 88% — zaliczony.
+
+**Do powtórki:**
+- Rozróżnianie WCAG 3.3.1 i 4.1.3.
+- Różnice między `role="status"` i `role="alert"`.
+- Wymagania WCAG a dobre praktyki związane z live regions.
+
+**Kolejna lekcja:** Lekcja 05 — Accessible names, descriptions i ARIA.
