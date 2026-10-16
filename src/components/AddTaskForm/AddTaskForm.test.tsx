@@ -57,6 +57,24 @@ describe('AddTaskForm validation', () => {
     expect(title).toHaveFocus();
   });
 
+  // A screen reader reads the field when it receives focus. The error must already be in the DOM at
+  // that moment: a description added after the focus event is not guaranteed to be announced.
+  it('marks the field invalid and links the error before focus moves to it', async () => {
+    const { user, title, submit } = setup();
+    let atFocus: { invalid: string | null; description: string } | undefined;
+    title.addEventListener('focus', () => {
+      const ids = title.getAttribute('aria-describedby')?.split(' ') ?? [];
+      atFocus = {
+        invalid: title.getAttribute('aria-invalid'),
+        description: ids.map((id) => document.getElementById(id)?.textContent).join(' '),
+      };
+    });
+
+    await user.click(submit);
+
+    expect(atFocus).toEqual({ invalid: 'true', description: `${REQUIRED} ${HINT}` });
+  });
+
   it('updates the error while the value is corrected and removes it once the value is valid', async () => {
     const { user, title, submit } = setup();
     await user.click(submit);

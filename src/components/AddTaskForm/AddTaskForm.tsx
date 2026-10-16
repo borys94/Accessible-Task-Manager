@@ -1,4 +1,5 @@
 import { useId, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { flushSync } from 'react-dom';
 import type { NewTask, Priority } from '../../types/task';
 import { TITLE_MAX_LENGTH, TITLE_MIN_LENGTH, validateTitle } from './validateTitle';
 import styles from './AddTaskForm.module.scss';
@@ -35,8 +36,13 @@ function AddTaskForm({ onAdd }: AddTaskFormProps) {
     // noValidate and shows its own error. Moving focus to the field makes the screen reader read
     // its name, "invalid" (aria-invalid) and the error text (aria-describedby) together.
     if (error) {
-      setTitleError(error);
-      setStatus('');
+      // React commits state updates after the handler returns, so a plain setState + focus() would
+      // move focus to a field that is not yet invalid nor linked to the error. flushSync writes the
+      // error to the DOM first; only then is focus moved and the screen reader reads the field.
+      flushSync(() => {
+        setTitleError(error);
+        setStatus('');
+      });
       titleRef.current?.focus();
       return;
     }

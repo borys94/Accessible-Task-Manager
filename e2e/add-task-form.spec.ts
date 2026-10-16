@@ -170,6 +170,28 @@ test.describe('Add task form: validation', () => {
     });
   }
 
+  // The screen reader reads the field when it receives focus, so the error must already be in the
+  // accessibility tree at that moment. The final state alone (toBeFocused + toHaveAccessibleDescription)
+  // would also pass if the error were added after focus moved, when it may never be announced.
+  test('the field is invalid and described by the error at the moment it receives focus', async ({ page }) => {
+    const { title, submit } = getForm(page);
+    await title.evaluate((input) => {
+      input.addEventListener('focus', () => {
+        const ids = input.getAttribute('aria-describedby')?.split(' ') ?? [];
+        input.dataset.stateAtFocus = JSON.stringify({
+          invalid: input.getAttribute('aria-invalid'),
+          description: ids.map((id) => document.getElementById(id)?.textContent).join(' '),
+        });
+      });
+    });
+
+    await submit.click();
+    await expect(title).toBeFocused();
+
+    const atFocus = JSON.parse((await title.getAttribute('data-state-at-focus')) ?? 'null');
+    expect(atFocus).toEqual({ invalid: 'true', description: `${REQUIRED} ${HINT}` });
+  });
+
   test('no error is shown while typing before the first submit', async ({ page }) => {
     const { title } = getForm(page);
     await title.focus();
