@@ -24,6 +24,8 @@ function AddTaskForm({ onAdd }: AddTaskFormProps) {
   const titleRef = useRef<HTMLInputElement>(null);
   const [titleError, setTitleError] = useState('');
   const [status, setStatus] = useState('');
+  // the key makes every announcement a new node, so a live region reads it again even when the text is the same
+  const [announcement, setAnnouncement] = useState<{ key: number; text: string } | null>(null);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -36,12 +38,21 @@ function AddTaskForm({ onAdd }: AddTaskFormProps) {
     // noValidate and shows its own error. Moving focus to the field makes the screen reader read
     // its name, "invalid" (aria-invalid) and the error text (aria-describedby) together.
     if (error) {
+      // When the form is submitted from the field itself (Enter), focus is already there: focus()
+      // fires no focus event and the screen reader does not read the field again. Only then is the
+      // error announced through the alert region; when focus moves from the button, the focus
+      // announcement already includes the error, and announcing it twice would only be noise.
+      const focusAlreadyOnField = document.activeElement === titleRef.current;
+
       // React commits state updates after the handler returns, so a plain setState + focus() would
       // move focus to a field that is not yet invalid nor linked to the error. flushSync writes the
       // error to the DOM first; only then is focus moved and the screen reader reads the field.
       flushSync(() => {
         setTitleError(error);
         setStatus('');
+        setAnnouncement((previous) =>
+          focusAlreadyOnField ? { key: (previous?.key ?? 0) + 1, text: `Error: ${error}` } : null,
+        );
       });
       titleRef.current?.focus();
       return;
@@ -54,14 +65,18 @@ function AddTaskForm({ onAdd }: AddTaskFormProps) {
     });
     form.reset();
     setTitleError('');
+    setAnnouncement(null);
     setStatus(`Task "${title}" added.`);
   };
 
   // The field is validated on submit only, so nobody gets an error while typing a title for the
   // first time. Once an error is shown it is re-checked on every change: it updates while the value
   // is still wrong and disappears as soon as the value is valid, without another submit.
+  // Changes are not announced while typing; the alert text is removed instead (removal is silent),
+  // so a hidden, outdated message is not left behind for the virtual cursor to find.
   const handleTitleChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (titleError) setTitleError(validateTitle(event.target.value));
+    setAnnouncement(null);
   };
 
   return (
@@ -118,6 +133,12 @@ function AddTaskForm({ onAdd }: AddTaskFormProps) {
       <button type="submit" className={styles.submit}>
         Add task
       </button>
+
+      {/* visually hidden: the same error is already visible next to the field; the region itself is
+          always rendered, as screen readers only watch live regions that exist before the change */}
+      <div role="alert" className={styles.visuallyHidden}>
+        {announcement && <p key={announcement.key}>{announcement.text}</p>}
+      </div>
 
       {/* status region (WCAG 4.1.3) is always rendered so screen readers register it before the message appears */}
       <p role="status" className={styles.status}>

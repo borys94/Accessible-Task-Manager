@@ -10,7 +10,7 @@ Konfiguracje:
 | NVDA (aktualna wersja) | Chrome, Firefox | Windows |
 | VoiceOver | Safari | macOS |
 
-Przed testem: `npm run dev`, otwórz `http://localhost:5173/tasks`. Wszystkie kroki wykonuj **wyłącznie klawiaturą**.
+Przed testem: `yarn dev`, otwórz `http://localhost:5173/tasks`. Wszystkie kroki wykonuj **wyłącznie klawiaturą**.
 
 ## Formularz „Add a task” — walidacja tytułu (WCAG 3.3.1, 3.3.3, 4.1.2)
 
@@ -31,11 +31,25 @@ Zadanie nie zostaje dodane.
 1. Tab do pola tytułu, wpisz `ab`.
 2. Naciśnij Enter, nie opuszczając pola.
 
-**Oczekiwane:** czytnik ogłasza stan „nieprawidłowe” i treść „Error: Task title must be at least 3 characters.”.
+**Oczekiwane:** czytnik od razu ogłasza „Error: Task title must be at least 3 characters.”, bez opuszczania pola.
+Komunikat jest odczytany **raz** (ewentualnie razem ze zmianą stanu na „nieprawidłowe”), a nie dwa razy.
 
-> Ryzyko do potwierdzenia: fokus **już jest** w polu, więc `focus()` nie wywołuje nowego zdarzenia focus,
-> a czytnik nie musi ponownie odczytać pola. Jeśli w tym scenariuszu błąd nie zostaje ogłoszony,
-> zgłoś to — wymaga to dodatkowego mechanizmu (np. podsumowania błędów otrzymującego fokus albo live region).
+> Fokus jest już w polu, więc `focus()` nie wywołuje nowego zdarzenia focus i czytnik nie odczytuje pola ponownie.
+> W tym przypadku (i tylko w nim) błąd jest ogłaszany przez ukryty region `role="alert"`. Przy submicie przyciskiem (M1)
+> region pozostaje pusty, bo błąd ogłasza przeniesienie fokusu.
+
+### M2a. Ten sam błąd ponownie
+
+1. Po M2, nadal w polu z wartością `ab`, naciśnij Enter jeszcze raz.
+
+**Oczekiwane:** komunikat zostaje ogłoszony ponownie, mimo że jego treść się nie zmieniła.
+
+### M2b. Brak powielenia przy wpisywaniu
+
+1. Po M2 dopisz jeden znak.
+
+**Oczekiwane:** czytnik nie ogłasza nic poza echem klawiatury (zmiany błędu podczas pisania nie są ogłaszane).
+W trybie przeglądania (NVDA: Insert+Spacja, potem strzałki) komunikat błędu występuje w formularzu tylko raz.
 
 ### M3. Poprawienie wartości
 
@@ -61,4 +75,4 @@ Uzupełnienie testów w `e2e/accessibility.spec.ts`, które sprawdzają styl i w
 
 | Data | Tester | Czytnik + przeglądarka | Scenariusze | Wynik | Uwagi |
 |---|---|---|---|---|---|
-| | | | M1–M4 | | |
+| | | | M1–M4 (z M2a, M2b) | | |

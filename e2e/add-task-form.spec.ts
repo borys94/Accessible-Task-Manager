@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { AXE_TAGS } from './helpers/axe';
 
@@ -14,7 +14,14 @@ function getForm(page: Page) {
     radio: (name: 'Low' | 'Medium' | 'High') => form.getByRole('radio', { name, exact: true }),
     submit: form.getByRole('button', { name: 'Add task', exact: true }),
     status: form.getByRole('status'),
+    alert: form.getByRole('alert'),
   };
+}
+
+/** The element the field's aria-describedby points to first (the error, when there is one). */
+async function firstDescription(field: Locator) {
+  const [firstId] = ((await field.getAttribute('aria-describedby')) ?? '').split(' ');
+  return field.page().locator(`[id="${firstId}"]`);
 }
 
 const taskItems = (page: Page) => page.getByRole('main').getByRole('list').getByRole('listitem');
@@ -139,6 +146,8 @@ test.describe('Add task form: keyboard only', () => {
 
 // What a screen reader announces is built from the accessibility tree: name, state (aria-invalid)
 // and description (aria-describedby). Focus is moved to the field, so all three are read at once.
+// When focus is already in the field (submit with Enter), no focus event fires, so the error is
+// announced through the alert region instead - and only then, so it is never read twice.
 // A native validation bubble is not part of that tree, which is why the form shows its own error.
 test.describe('Add task form: validation', () => {
   const REQUIRED = 'Error: Enter a task title.';
@@ -155,7 +164,7 @@ test.describe('Add task form: validation', () => {
     test(`${name}: the task is not added, focus moves to the field, which is invalid and described by the error`, async ({
       page,
     }) => {
-      const { form, title, submit, status } = getForm(page);
+      const { title, submit, status, alert } = getForm(page);
       await title.fill(value);
       await (submitWith === 'button' ? submit : title).press('Enter');
 
@@ -165,8 +174,12 @@ test.describe('Add task form: validation', () => {
       await expect(title).toHaveAttribute('aria-invalid', 'true');
       // the error comes first, then the hint: the most important information is read first
       await expect(title).toHaveAccessibleDescription(`${error} ${HINT}`);
-      // the same text is visible, so sighted users get the same information
-      await expect(form.getByText(error)).toBeVisible();
+      // the error the field is described by is visible, so sighted users get the same information
+      const errorElement = await firstDescription(title);
+      await expect(errorElement).toBeVisible();
+      await expect(errorElement).toHaveText(error);
+      // the alert speaks only when focus did not move (see the comment above the describe)
+      await expect(alert).toHaveText(submitWith === 'field' ? error : '');
     });
   }
 
@@ -221,6 +234,25 @@ test.describe('Add task form: validation', () => {
     await page.keyboard.press('Enter');
     await expect(status).toHaveText('Task "abc" added.');
     await expect(taskItems(page).last().getByRole('heading')).toHaveText('abc');
+  });
+
+  test('Enter in the field announces the error again on every failed submit, and stops once the value changes', async ({
+    page,
+  }) => {
+    const { title, alert } = getForm(page);
+    await title.fill('ab');
+    await title.press('Enter');
+    await expect(alert).toHaveText(TOO_SHORT);
+
+    // the same text again: it must be a new node, otherwise the live region has no change to read
+    const first = await alert.locator('p').elementHandle();
+    await title.press('Enter');
+    await expect(alert).toHaveText(TOO_SHORT);
+    expect(await alert.locator('p').evaluate((node, previous) => node === previous, first)).toBe(false);
+
+    // typing removes the announcement, so no outdated hidden copy of the error is left behind
+    await page.keyboard.type('c');
+    await expect(alert).toBeEmpty();
   });
 
   test('a corrected value can be submitted again and the error is cleared', async ({ page }) => {
