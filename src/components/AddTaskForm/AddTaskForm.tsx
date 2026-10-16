@@ -1,8 +1,7 @@
-import { useId, useRef, useState, type FormEvent } from 'react';
+import { useId, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import type { NewTask, Priority } from '../../types/task';
+import { TITLE_MAX_LENGTH, TITLE_MIN_LENGTH, validateTitle } from './validateTitle';
 import styles from './AddTaskForm.module.scss';
-
-export const TITLE_MAX_LENGTH = 100;
 
 const PRIORITIES: { value: Priority; label: string }[] = [
   { value: 'low', label: 'Low' },
@@ -30,12 +29,13 @@ function AddTaskForm({ onAdd }: AddTaskFormProps) {
     const form = event.currentTarget;
     const data = new FormData(form);
     const title = String(data.get('title')).trim();
+    const error = validateTitle(title);
 
     // Native validation bubbles are not reliably announced by screen readers, so the form uses
     // noValidate and shows its own error. Moving focus to the field makes the screen reader read
     // its name, "invalid" (aria-invalid) and the error text (aria-describedby) together.
-    if (!title) {
-      setTitleError('Enter a task title.');
+    if (error) {
+      setTitleError(error);
       setStatus('');
       titleRef.current?.focus();
       return;
@@ -51,6 +51,13 @@ function AddTaskForm({ onAdd }: AddTaskFormProps) {
     setStatus(`Task "${title}" added.`);
   };
 
+  // The field is validated on submit only, so nobody gets an error while typing a title for the
+  // first time. Once an error is shown it is re-checked on every change: it updates while the value
+  // is still wrong and disappears as soon as the value is valid, without another submit.
+  const handleTitleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (titleError) setTitleError(validateTitle(event.target.value));
+  };
+
   return (
     // aria-labelledby turns the form into a named "form" landmark
     <form className={styles.form} aria-labelledby={headingId} onSubmit={handleSubmit} noValidate>
@@ -60,8 +67,9 @@ function AddTaskForm({ onAdd }: AddTaskFormProps) {
 
       <div className={styles.field}>
         <label htmlFor={titleId}>Task title (required)</label>
+        {/* the rules are given before the first error (WCAG 3.3.2 Labels or Instructions) */}
         <p id={titleHintId} className={styles.hint}>
-          Maximum {TITLE_MAX_LENGTH} characters.
+          Between {TITLE_MIN_LENGTH} and {TITLE_MAX_LENGTH} characters.
         </p>
         {/* "Error:" prefix: the error is not conveyed by colour alone (WCAG 1.4.1) */}
         {titleError && (
@@ -78,6 +86,7 @@ function AddTaskForm({ onAdd }: AddTaskFormProps) {
           required
           maxLength={TITLE_MAX_LENGTH}
           autoComplete="off"
+          onChange={handleTitleChange}
           aria-invalid={titleError ? true : undefined}
           aria-describedby={titleError ? `${titleErrorId} ${titleHintId}` : titleHintId}
         />
