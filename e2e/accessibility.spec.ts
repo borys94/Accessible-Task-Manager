@@ -12,7 +12,7 @@ async function openPage(page: Page, path: string, heading: string) {
   await expect(page.getByRole('heading', { level: 2, name: heading })).toBeVisible();
 }
 
-// Expected Tab order on /tasks: skip link, header navigation, the add task form, then the task buttons.
+// Expected Tab order on /tasks: skip link, header navigation, the add task form, then each task's buttons.
 const TAB_ORDER = [
   'Skip to main content',
   'Tasks',
@@ -21,9 +21,12 @@ const TAB_ORDER = [
   'Description (optional)',
   'Medium', // a radio group is one Tab stop: the checked radio
   'Add task',
-  'Mark as to do: Add a skip link', // this task starts completed
-  'Mark as completed: Check colour contrast',
-  'Mark as completed: Test with a screen reader',
+  'Mark as to do – Add a skip link', // this task starts completed
+  'Delete task: Add a skip link',
+  'Mark as completed – Check colour contrast',
+  'Delete task: Check colour contrast',
+  'Mark as completed – Test with a screen reader',
+  'Delete task: Test with a screen reader',
 ];
 
 const FOCUSABLE = 'a[href], button, input, select, textarea, summary, [tabindex], [contenteditable="true"]';
@@ -223,29 +226,27 @@ test.describe('Keyboard navigation', () => {
 
   test('buttons can be activated with Enter and Space', async ({ page }) => {
     const task = page.getByRole('listitem').filter({ hasText: 'Check colour contrast' });
-    const button = task.getByRole('button');
+    const button = task.getByRole('button', { name: /^Mark as/ });
 
-    await expect(button).toHaveAccessibleName('Mark as completed: Check colour contrast');
+    await expect(button).toHaveAccessibleName('Mark as completed – Check colour contrast');
     await expect(task).toContainText('Status: To do');
 
     await button.focus();
     await page.keyboard.press('Enter');
-    await expect(button).toHaveText('Mark as to do');
-    await expect(button).toHaveAccessibleName('Mark as to do: Check colour contrast');
+    await expect(button).toHaveAccessibleName('Mark as to do – Check colour contrast');
     await expect(task).toContainText('Status: Completed');
     await expect(button).toBeFocused();
 
     await page.keyboard.press('Space');
-    await expect(button).toHaveText('Mark as completed');
-    await expect(button).toHaveAccessibleName('Mark as completed: Check colour contrast');
+    await expect(button).toHaveAccessibleName('Mark as completed – Check colour contrast');
     await expect(task).toContainText('Status: To do');
     await expect(button).toBeFocused();
   });
 
   test('view has no WCAG 2.2 A/AA violations after keyboard interaction', async ({ page }) => {
-    await page.getByRole('button', { name: 'Mark as completed: Check colour contrast' }).focus();
+    await page.getByRole('button', { name: 'Mark as completed – Check colour contrast' }).focus();
     await page.keyboard.press('Enter');
-    await expect(page.locator(':focus')).toHaveAccessibleName('Mark as to do: Check colour contrast');
+    await expect(page.locator(':focus')).toHaveAccessibleName('Mark as to do – Check colour contrast');
 
     const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
 

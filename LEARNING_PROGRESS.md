@@ -161,4 +161,17 @@ Omówione i poprawione problemy:
 - Różnice między `role="status"` i `role="alert"`.
 - Wymagania WCAG a dobre praktyki związane z live regions.
 
-**Kolejna lekcja:** Lekcja 05 — Accessible names, descriptions i ARIA.
+## Lekcja 05 — Accessible Names, Descriptions i ARIA
+
+- Data zakończenia: 2026-10-17
+- Status: Ukończona decyzją uczestnika
+- Pull Request: #6
+- WCAG: 1.3.1 (A), 2.5.3 (A), 3.3.2 (A), 4.1.2 (A)
+- Implementacja: dostępne nazwy przycisków i pól, opisy formularzy, dekoracyjne SVG
+- Testy: Playwright, axe-core, manualna weryfikacja czytnikiem ekranu
+- Code review: Approved
+- Quiz końcowy: 5,5/10 (55%) — niezaliczony
+- Test poprawkowy: pominięty na wyraźną prośbę uczestnika
+- Do powtórki: Accessible Name Computation, aria-describedby,
+  ukryte elementy, aria-pressed, ograniczenia testów automatycznych
+- Następny etap: egzamin zbiorczy z lekcji 01–05
