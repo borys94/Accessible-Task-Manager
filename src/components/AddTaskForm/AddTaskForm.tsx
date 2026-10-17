@@ -136,7 +136,7 @@ function AddTaskForm({ onAdd }: AddTaskFormProps) {
 
       {/* visually hidden: the same error is already visible next to the field; the region itself is
           always rendered, as screen readers only watch live regions that exist before the change */}
-      <div role="alert" className={styles.visuallyHidden}>
+      <div role="alert" className="visually-hidden">
         {announcement && <p key={announcement.key}>{announcement.text}</p>}
       </div>
 

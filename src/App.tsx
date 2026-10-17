@@ -14,6 +14,8 @@ function App() {
   const toggleTask = (id: number) =>
     setTasks((current) => current.map((task) => (task.id === id ? { ...task, completed: !task.completed } : task)));
 
+  const deleteTask = (id: number) => setTasks((current) => current.filter((task) => task.id !== id));
+
   const addTask = (task: NewTask) =>
     setTasks((current) => [
       ...current,
@@ -26,7 +28,7 @@ function App() {
       <Main>
         <Routes>
           <Route index element={<Navigate to="/tasks" replace />} />
-          <Route path="tasks" element={<TaskList tasks={tasks} onToggle={toggleTask} onAdd={addTask} />} />
+          <Route path="tasks" element={<TaskList tasks={tasks} onToggle={toggleTask} onAdd={addTask} onDelete={deleteTask} />} />
           <Route path="about" element={<About />} />
           <Route path="*" element={<Navigate to="/tasks" replace />} />
         </Routes>

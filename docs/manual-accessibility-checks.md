@@ -64,6 +64,29 @@ W trybie przeglądania (NVDA: Insert+Spacja, potem strzałki) komunikat błędu 
 
 **Oczekiwane:** czytnik ogłasza „Task "…" added.” (region `role="status"`), zadanie pojawia się na liście, formularz jest wyczyszczony.
 
+## Lista zadań — przyciski akcji (WCAG 1.1.1, 2.4.6, 2.5.3, 4.1.2)
+
+Cel: nazwa każdego przycisku mówi, **co** zrobi i **z którym** zadaniem — tego axe-core nie sprawdza.
+
+### M5. Lista przycisków
+
+1. Otwórz listę przycisków czytnika (NVDA: Insert+F7 → Przyciski, VoiceOver: VO+U → Przyciski).
+
+**Oczekiwane:** każde zadanie ma dwa przyciski, np. „Mark as completed – Check colour contrast” i „Delete task: Check colour contrast”; żadna nazwa się nie powtarza, ikona kosza nie jest odczytywana jako obraz.
+
+### M6. Zmiana stanu zadania
+
+1. Tab do „Mark as completed – Check colour contrast”, naciśnij Spację.
+
+**Oczekiwane:** fokus zostaje na przycisku. Sprawdź, czy czytnik sam ogłasza nową nazwę „Mark as to do – …”; jeśli nie, odczytaj bieżący element (NVDA: Insert+Tab) — nazwa musi być już nowa.
+
+### M7. Usuwanie klawiaturą
+
+1. Tab do „Delete task: Add a skip link”, naciśnij Enter.
+
+**Oczekiwane:** czytnik ogłasza „Task "Add a skip link" deleted.” oraz nowy przycisk z fokusem: „Delete task: Check colour contrast”. Fokus nie przeskakuje na początek strony.
+Po usunięciu ostatniego zadania fokus trafia na nagłówek „Tasks”, a pod nim jest „No tasks yet.”.
+
 ## Fokus klawiatury (WCAG 2.4.7, 2.4.11, 1.4.11)
 
 Uzupełnienie testów w `e2e/accessibility.spec.ts`, które sprawdzają styl i widoczność fokusu tylko heurystycznie.
@@ -75,4 +98,4 @@ Uzupełnienie testów w `e2e/accessibility.spec.ts`, które sprawdzają styl i w
 
 | Data | Tester | Czytnik + przeglądarka | Scenariusze | Wynik | Uwagi |
 |---|---|---|---|---|---|
-| | | | M1–M4 (z M2a, M2b) | | |
+| | | | M1–M7 (z M2a, M2b) | | |
