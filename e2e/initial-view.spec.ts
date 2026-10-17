@@ -1,13 +1,6 @@
-import { test, expect, type Locator } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-
-// Accessible name as computed by the browser's accessibility tree,
-// e.g. `- navigation "Main":` -> "Main".
-async function accessibleName(locator: Locator): Promise<string> {
-  const snapshot = await locator.ariaSnapshot();
-  const firstLine = snapshot.split('\n')[0];
-  return firstLine.match(/^- \w+ "((?:[^"\\]|\\.)*)"/)?.[1] ?? '';
-}
+import { accessibleName } from './helpers/accessible-name';
 
 test.describe('Initial view', () => {
   test.beforeEach(async ({ page }) => {

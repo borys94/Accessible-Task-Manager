@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { AXE_TAGS } from './helpers/axe';
+import { accessibleName } from './helpers/accessible-name';
 
 const TITLES = ['Add a skip link', 'Check colour contrast', 'Test with a screen reader'];
 
@@ -93,11 +94,21 @@ test.describe('Mark as completed / to do button', () => {
     await expect(button).not.toHaveAttribute('aria-pressed');
   });
 
-  test('each task has its own distinguishable name', async ({ page }) => {
-    const names = await taskList(page)
-      .getByRole('button')
-      .evaluateAll((buttons) => buttons.map((button) => button.textContent));
+  // Names are read from the accessibility tree, not from textContent: an aria-label shared by all
+  // buttons would override their content and make them identical for a screen reader, while
+  // textContent would still look unique.
+  test('every button in the list has a non-empty, unique accessible name', async ({ page }) => {
+    const buttons = await taskList(page).getByRole('button').all();
+    expect(buttons).toHaveLength(TITLES.length * 2);
+
+    const names = await Promise.all(buttons.map(accessibleName));
+    for (const name of names) expect(name).not.toBe('');
     expect(new Set(names).size).toBe(names.length);
+
+    // and the role lookup a screen reader user relies on resolves each name to exactly one button
+    for (const name of names) {
+      await expect(page.getByRole('button', { name, exact: true })).toHaveCount(1);
+    }
   });
 });
 

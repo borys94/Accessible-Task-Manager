@@ -1,1 +1,1 @@
-{"root":["./vite.config.ts","./playwright.config.ts","./e2e/accessibility.spec.ts","./e2e/add-task-form.spec.ts","./e2e/initial-view.spec.ts","./e2e/task-actions.spec.ts","./e2e/helpers/axe.ts"],"version":"5.8.3"}
+{"root":["./vite.config.ts","./playwright.config.ts","./e2e/accessibility.spec.ts","./e2e/add-task-form.spec.ts","./e2e/initial-view.spec.ts","./e2e/task-actions.spec.ts","./e2e/helpers/accessible-name.ts","./e2e/helpers/axe.ts"],"version":"5.8.3"}
