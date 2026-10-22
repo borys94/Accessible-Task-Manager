@@ -1,22 +1,37 @@
-import { useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import type { NewTask, Priority, Task } from '../../types/task';
 import AddTaskForm from '../AddTaskForm/AddTaskForm';
+import ChevronIcon from './ChevronIcon';
+import StarIcon from './StarIcon';
 import TrashIcon from './TrashIcon';
 import styles from './TaskList.module.scss';
 
 interface TaskListProps {
   tasks: Task[];
   onToggle: (id: number) => void;
+  onToggleImportant: (id: number) => void;
   onAdd: (task: NewTask) => void;
   onDelete: (id: number) => void;
 }
 
 const PRIORITY_LABELS: Record<Priority, string> = { low: 'Low', medium: 'Medium', high: 'High' };
 
-function TaskList({ tasks, onToggle, onAdd, onDelete }: TaskListProps) {
+function TaskList({ tasks, onToggle, onToggleImportant, onAdd, onDelete }: TaskListProps) {
+  const id = useId();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const deleteButtons = useRef(new Map<number, HTMLButtonElement>());
   const [status, setStatus] = useState('');
+  // which tasks have their details open: view state only, so it lives here and not in the task data
+  const [expanded, setExpanded] = useState<ReadonlySet<number>>(new Set());
+
+  // Neither toggle re-creates its button (the list items are keyed by task id), so focus stays on
+  // the button that was pressed and the screen reader announces the new state in place.
+  const toggleDetails = (taskId: number) =>
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (!next.delete(taskId)) next.add(taskId);
+      return next;
+    });
 
   // The focused button is removed together with its task, which would drop focus to <body> and make
   // keyboard and screen reader users start over from the top of the page. Focus moves to the delete
@@ -48,16 +63,49 @@ function TaskList({ tasks, onToggle, onAdd, onDelete }: TaskListProps) {
             // the label names the action, so it changes with the state (no aria-pressed:
             // a toggle button must keep the same label, otherwise "pressed" contradicts it)
             const action = task.completed ? 'Mark as to do' : 'Mark as completed';
+            const isExpanded = expanded.has(task.id);
+            const detailsId = `${id}-details-${task.id}`;
 
             return (
               <li key={task.id} className={styles.item}>
                 <h3 className={styles.title}>{task.title}</h3>
-                {task.description && <p className={styles.description}>{task.description}</p>}
                 <p className={styles.priority}>Priority: {PRIORITY_LABELS[task.priority]}</p>
                 <p className={`${styles.status} ${task.completed ? styles.completed : styles.pending}`}>
                   Status: {task.completed ? 'Completed' : 'To do'}
                 </p>
+                {/* Disclosure: a native button with aria-expanded, no extra role. The name stays the same
+                    in both states ("Details"), the state is announced as expanded / collapsed.
+                    The panel follows the button directly, so after expanding, the next thing a screen
+                    reader user reads is the revealed content. Focus stays on the button. */}
+                <button
+                  type="button"
+                  className={styles.disclosure}
+                  aria-expanded={isExpanded}
+                  aria-controls={detailsId}
+                  onClick={() => toggleDetails(task.id)}
+                >
+                  <ChevronIcon />
+                  Details
+                  <span className="visually-hidden"> – {task.title}</span>
+                </button>
+                {/* hidden removes the collapsed panel from the screen and the accessibility tree */}
+                <div id={detailsId} className={styles.details} hidden={!isExpanded}>
+                  <p className={styles.description}>{task.description || 'No description.'}</p>
+                </div>
                 <div className={styles.actions}>
+                  {/* Toggle button: aria-pressed carries the state, so the name must NOT change
+                      ("Important, toggle button, pressed / not pressed"). A name like "Mark as
+                      important" would contradict the state once pressed. */}
+                  <button
+                    type="button"
+                    className={styles.important}
+                    aria-pressed={task.important}
+                    onClick={() => onToggleImportant(task.id)}
+                  >
+                    <StarIcon filled={task.important} />
+                    Important
+                    <span className="visually-hidden"> – {task.title}</span>
+                  </button>
                   {/* The name comes from the button's content, no aria-label needed: the visible action
                       starts it (WCAG 2.5.3 Label in Name) and the hidden task title makes each button
                       distinguishable in a screen reader's list of buttons.

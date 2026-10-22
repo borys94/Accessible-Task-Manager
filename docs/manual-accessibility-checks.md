@@ -72,7 +72,7 @@ Cel: nazwa każdego przycisku mówi, **co** zrobi i **z którym** zadaniem — t
 
 1. Otwórz listę przycisków czytnika (NVDA: Insert+F7 → Przyciski, VoiceOver: VO+U → Przyciski).
 
-**Oczekiwane:** każde zadanie ma dwa przyciski, np. „Mark as completed – Check colour contrast” i „Delete task: Check colour contrast”; żadna nazwa się nie powtarza, ikona kosza nie jest odczytywana jako obraz.
+**Oczekiwane:** każde zadanie ma cztery przyciski, np. „Details – Check colour contrast”, „Important – Check colour contrast”, „Mark as completed – Check colour contrast” i „Delete task: Check colour contrast”; żadna nazwa się nie powtarza, ikona kosza nie jest odczytywana jako obraz.
 
 ### M6. Zmiana stanu zadania
 
@@ -86,6 +86,30 @@ Cel: nazwa każdego przycisku mówi, **co** zrobi i **z którym** zadaniem — t
 
 **Oczekiwane:** czytnik ogłasza „Task "Add a skip link" deleted.” oraz nowy przycisk z fokusem: „Delete task: Check colour contrast”. Fokus nie przeskakuje na początek strony.
 Po usunięciu ostatniego zadania fokus trafia na nagłówek „Tasks”, a pod nim jest „No tasks yet.”.
+
+## Lista zadań — toggle i disclosure (WCAG 1.4.1, 2.1.1, 4.1.2)
+
+Cel: zmiana stanu jest **zrozumiała** dla użytkownika czytnika i widoczna nie tylko kolorem.
+axe-core sprawdza tylko poprawność atrybutów ARIA — nie to, czy wzorzec pasuje ani czy komunikat ma sens.
+
+### M8. Przycisk „Important” (aria-pressed)
+
+1. Tab do „Important – Add a skip link”.
+2. Naciśnij Spację, potem Enter.
+
+**Oczekiwane:** przy fokusie czytnik odczytuje nazwę, rolę przycisku przełączającego i stan (NVDA: *toggle button, not pressed*; VoiceOver: *toggle button* / *selected*).
+Po każdym naciśnięciu fokus zostaje na przycisku, czytnik ogłasza nowy stan, a **nazwa się nie zmienia**.
+Wizualnie: wypełniona gwiazdka i ciemne tło gdy włączony, kontur gwiazdki gdy wyłączony. W trybie wysokiego kontrastu (Windows: Contrast themes) stan nadal jest rozpoznawalny po kształcie gwiazdki.
+
+### M9. Przycisk „Details” (aria-expanded)
+
+1. Tab do „Details – Check colour contrast”, naciśnij Enter.
+2. Przejdź strzałką w dół (tryb przeglądania).
+3. Wróć do przycisku i naciśnij Spację.
+
+**Oczekiwane:** przy fokusie czytnik odczytuje „collapsed / zwinięte”, po Enter „expanded / rozwinięte”; fokus zostaje na przycisku.
+Strzałka w dół od razu odczytuje opis zadania (panel jest bezpośrednio po przycisku). Po zwinięciu opis nie jest dostępny w trybie przeglądania.
+Strzałka (chevron) obraca się zgodnie ze stanem.
 
 ## Fokus klawiatury (WCAG 2.4.7, 2.4.11, 1.4.11)
 

@@ -99,7 +99,7 @@ test.describe('Mark as completed / to do button', () => {
   // textContent would still look unique.
   test('every button in the list has a non-empty, unique accessible name', async ({ page }) => {
     const buttons = await taskList(page).getByRole('button').all();
-    expect(buttons).toHaveLength(TITLES.length * 2);
+    expect(buttons).toHaveLength(TITLES.length * 4); // details, important, mark as, delete
 
     const names = await Promise.all(buttons.map(accessibleName));
     for (const name of names) expect(name).not.toBe('');
