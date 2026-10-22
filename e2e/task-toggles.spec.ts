@@ -197,8 +197,10 @@ test.describe('Keyboard order within a task', () => {
   });
 });
 
-// axe checks that the buttons have names, valid ARIA attributes and values (aria-pressed,
-// aria-expanded, aria-controls pointing to an existing id), contrast and target size.
+// axe checks that the buttons have names, that the ARIA attributes are allowed on them and have
+// valid values (aria-pressed, aria-expanded), contrast and target size. Whether aria-controls points
+// to the right element is not relied on here: axe's id check is lenient (e.g. on a collapsed
+// button), so the panel's existence and position are asserted directly in the disclosure tests.
 // It does NOT check that a toggle button was the right pattern for "important" (rather than a
 // checkbox or a switch), that the name stays the same when the state changes, that focus stays on
 // the button, or that a screen reader user understands what changed - that is covered by the tests
