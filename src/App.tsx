@@ -14,12 +14,15 @@ function App() {
   const toggleTask = (id: number) =>
     setTasks((current) => current.map((task) => (task.id === id ? { ...task, completed: !task.completed } : task)));
 
+  const toggleImportant = (id: number) =>
+    setTasks((current) => current.map((task) => (task.id === id ? { ...task, important: !task.important } : task)));
+
   const deleteTask = (id: number) => setTasks((current) => current.filter((task) => task.id !== id));
 
   const addTask = (task: NewTask) =>
     setTasks((current) => [
       ...current,
-      { ...task, id: Math.max(0, ...current.map(({ id }) => id)) + 1, completed: false },
+      { ...task, id: Math.max(0, ...current.map(({ id }) => id)) + 1, completed: false, important: false },
     ]);
 
   return (
@@ -28,7 +31,7 @@ function App() {
       <Main>
         <Routes>
           <Route index element={<Navigate to="/tasks" replace />} />
-          <Route path="tasks" element={<TaskList tasks={tasks} onToggle={toggleTask} onAdd={addTask} onDelete={deleteTask} />} />
+          <Route path="tasks" element={<TaskList tasks={tasks} onToggle={toggleTask} onToggleImportant={toggleImportant} onAdd={addTask} onDelete={deleteTask} />} />
           <Route path="about" element={<About />} />
           <Route path="*" element={<Navigate to="/tasks" replace />} />
         </Routes>

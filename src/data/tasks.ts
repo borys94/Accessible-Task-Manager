@@ -7,6 +7,7 @@ export const tasks: Task[] = [
     description: 'Let keyboard users jump straight to the main content.',
     priority: 'high',
     completed: true,
+    important: false,
   },
   {
     id: 2,
@@ -14,6 +15,7 @@ export const tasks: Task[] = [
     description: 'Make sure text meets the WCAG AA contrast ratio of 4.5:1.',
     priority: 'high',
     completed: false,
+    important: true,
   },
   {
     id: 3,
@@ -21,5 +23,6 @@ export const tasks: Task[] = [
     description: 'Walk through the app using VoiceOver and NVDA.',
     priority: 'medium',
     completed: false,
+    important: false,
   },
 ];

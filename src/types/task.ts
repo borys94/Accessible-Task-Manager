@@ -6,6 +6,7 @@ export interface Task {
   description: string;
   priority: Priority;
   completed: boolean;
+  important: boolean;
 }
 
-export type NewTask = Omit<Task, 'id' | 'completed'>;
+export type NewTask = Omit<Task, 'id' | 'completed' | 'important'>;
