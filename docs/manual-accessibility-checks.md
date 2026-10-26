@@ -143,6 +143,25 @@ Krok 2: **każde** ponowienie jest ogłaszane, mimo identycznej treści. Każdy 
 gwarantuje odczytu — wynik zależy od pary czytnik + przeglądarka. Wykonaj w NVDA + Firefox, NVDA + Chrome i VoiceOver + Safari
 i zapisz w rejestrze, ile z 3 ogłoszeń padło. Jeśli któraś para pomija powtórzenia, rozważ czyszczenie regionu i wstawianie tekstu z opóźnieniem.
 
+## Zarządzanie fokusem — usuwanie i edycja (WCAG 2.4.3, 3.2.1)
+
+Testy automatyczne sprawdzają, **gdzie** jest fokus. Tutaj sprawdź, **co czytnik odczytuje** po każdym przeniesieniu.
+
+### M13. Edycja zadania
+
+1. Tab do „Edit – Check colour contrast”, naciśnij Enter.
+2. Naciśnij Escape. Powtórz krok 1, zmień tytuł, naciśnij Enter.
+
+**Oczekiwane:** po kroku 1 czytnik od razu odczytuje pole „Title (required)” z bieżącym tytułem i formularz nazwany tytułem zadania.
+Po Escape — przycisk „Edit – Check colour contrast”. Po zapisie — przycisk „Edit – <nowy tytuł>” i komunikat „Task updated: …”.
+Czytnik nie odczytuje „dokument”/„strona” ani nie wraca na początek strony.
+
+### M14. Usuwanie ostatniego zadania
+
+1. Usuń wszystkie zadania klawiaturą (Enter na „Delete task: …”).
+
+**Oczekiwane:** po ostatnim usunięciu czytnik odczytuje przycisk „Add task” i komunikat „Task deleted: …”.
+
 ## Fokus klawiatury (WCAG 2.4.7, 2.4.11, 1.4.11)
 
 Uzupełnienie testów w `e2e/accessibility.spec.ts`, które sprawdzają styl i widoczność fokusu tylko heurystycznie.

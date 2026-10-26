@@ -24,14 +24,17 @@ const TAB_ORDER = [
   'Details – Add a skip link',
   'Important – Add a skip link',
   'Mark as to do – Add a skip link', // this task starts completed
+  'Edit – Add a skip link',
   'Delete task: Add a skip link',
   'Details – Check colour contrast',
   'Important – Check colour contrast',
   'Mark as completed – Check colour contrast',
+  'Edit – Check colour contrast',
   'Delete task: Check colour contrast',
   'Details – Test with a screen reader',
   'Important – Test with a screen reader',
   'Mark as completed – Test with a screen reader',
+  'Edit – Test with a screen reader',
   'Delete task: Test with a screen reader',
 ];
 

@@ -8,7 +8,7 @@ const REQUIRED = 'Error: Enter a task title.';
 const TOO_SHORT = 'Error: Task title must be at least 3 characters.';
 
 function setup() {
-  const onAdd = vi.fn(() => true);
+  const onAdd = vi.fn(async () => true);
   const user = userEvent.setup();
   render(<AddTaskForm onAdd={onAdd} />);
   return {

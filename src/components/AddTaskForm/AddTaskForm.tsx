@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useId, useRef, useState, type ChangeEvent, type FormEvent, type Ref } from 'react';
 import { flushSync } from 'react-dom';
 import type { NewTask, Priority } from '../../types/task';
 import { TITLE_MAX_LENGTH, TITLE_MIN_LENGTH, validateTitle } from './validateTitle';
@@ -12,10 +12,12 @@ const PRIORITIES: { value: Priority; label: string }[] = [
 
 interface AddTaskFormProps {
   /** false when the task could not be saved: the form keeps the input, the caller reports the error */
-  onAdd: (task: NewTask) => boolean;
+  onAdd: (task: NewTask) => Promise<boolean>;
+  /** the "Add task" button, which the task list focuses when its last task is deleted */
+  submitRef?: Ref<HTMLButtonElement>;
 }
 
-function AddTaskForm({ onAdd }: AddTaskFormProps) {
+function AddTaskForm({ onAdd, submitRef }: AddTaskFormProps) {
   const id = useId();
   const headingId = `${id}-heading`;
   const titleId = `${id}-title`;
@@ -23,13 +25,15 @@ function AddTaskForm({ onAdd }: AddTaskFormProps) {
   const titleErrorId = `${id}-title-error`;
   const descriptionId = `${id}-description`;
   const titleRef = useRef<HTMLInputElement>(null);
+  const saving = useRef(false);
   const [titleError, setTitleError] = useState('');
   const [status, setStatus] = useState('');
   // the key makes every announcement a new node, so a live region reads it again even when the text is the same
   const [announcement, setAnnouncement] = useState<{ key: number; text: string } | null>(null);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (saving.current) return; // a second Enter while saving would add the task twice
     const form = event.currentTarget;
     const data = new FormData(form);
     const title = String(data.get('title')).trim();
@@ -59,11 +63,13 @@ function AddTaskForm({ onAdd }: AddTaskFormProps) {
       return;
     }
 
-    const saved = onAdd({
+    saving.current = true;
+    const saved = await onAdd({
       title,
       description: String(data.get('description')).trim(),
       priority: data.get('priority') as Priority,
     });
+    saving.current = false;
     if (!saved) {
       setStatus('');
       return;
@@ -135,7 +141,7 @@ function AddTaskForm({ onAdd }: AddTaskFormProps) {
         ))}
       </fieldset>
 
-      <button type="submit" className={styles.submit}>
+      <button ref={submitRef} type="submit" className={styles.submit}>
         Add task
       </button>
 
