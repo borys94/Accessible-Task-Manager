@@ -1,0 +1,39 @@
+// Sticks to the bottom of the viewport while the task list is on screen, so the outcome is visible
+// next to the button that was used even when the list is long. html has scroll-padding-bottom
+// (src/index.css), so an element that receives focus is scrolled above it, not under it (WCAG 2.4.11).
+// Empty regions take no space and cover nothing.
+.area {
+  position: sticky;
+  bottom: 1rem;
+  z-index: 1;
+  margin-top: 1rem;
+}
+
+.message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.375rem;
+  background: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 20%);
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+// both colours have more than 4.5:1 against white; the borders differ in style too (solid / thick
+// left bar), so the difference survives forced colors mode and colour blindness
+.success {
+  border: 2px solid #146c2e;
+  color: #146c2e;
+}
+
+.error {
+  border: 2px solid #b3261e;
+  border-left-width: 0.5rem;
+  color: #b3261e;
+}

@@ -1,6 +1,7 @@
 import { useId, useRef, useState } from 'react';
 import type { NewTask, Priority, Task } from '../../types/task';
 import AddTaskForm from '../AddTaskForm/AddTaskForm';
+import TaskNotification, { type Notification } from '../TaskNotification/TaskNotification';
 import ChevronIcon from './ChevronIcon';
 import StarIcon from './StarIcon';
 import TrashIcon from './TrashIcon';
@@ -8,10 +9,11 @@ import styles from './TaskList.module.scss';
 
 interface TaskListProps {
   tasks: Task[];
-  onToggle: (id: number) => void;
-  onToggleImportant: (id: number) => void;
-  onAdd: (task: NewTask) => void;
-  onDelete: (id: number) => void;
+  // each operation returns false when the change could not be saved (and nothing changed)
+  onToggle: (id: number) => boolean;
+  onToggleImportant: (id: number) => boolean;
+  onAdd: (task: NewTask) => boolean;
+  onDelete: (id: number) => boolean;
 }
 
 const PRIORITY_LABELS: Record<Priority, string> = { low: 'Low', medium: 'Medium', high: 'High' };
@@ -20,7 +22,7 @@ function TaskList({ tasks, onToggle, onToggleImportant, onAdd, onDelete }: TaskL
   const id = useId();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const deleteButtons = useRef(new Map<number, HTMLButtonElement>());
-  const [status, setStatus] = useState('');
+  const [notification, setNotification] = useState<Notification | null>(null);
   // which tasks have their details open: view state only, so it lives here and not in the task data
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(new Set());
 
@@ -33,28 +35,61 @@ function TaskList({ tasks, onToggle, onToggleImportant, onAdd, onDelete }: TaskL
       return next;
     });
 
+  const notify = (type: Notification['type'], text: string) =>
+    setNotification((previous) => ({ type, text, id: (previous?.id ?? 0) + 1 }));
+
+  // The task title is part of every message: after several operations in a row the user still knows
+  // which task each one was about. On failure focus stays where it is, so the user can simply retry.
+  const toggleTask = (task: Task) => {
+    if (!onToggle(task.id)) {
+      notify('error', `Could not save the change. "${task.title}" is still marked as ${task.completed ? 'completed' : 'to do'}. Try again.`);
+    } else {
+      notify('success', task.completed ? `Task marked as incomplete: ${task.title}` : `Task completed: ${task.title}`);
+    }
+  };
+
+  // aria-pressed already announces the new state, so a success message would only repeat it
+  const toggleImportant = (task: Task) => {
+    if (!onToggleImportant(task.id)) {
+      notify('error', `Could not save the change. "${task.title}" is still ${task.important ? '' : 'not '}marked as important. Try again.`);
+    }
+  };
+
+  const addTask = (task: NewTask) => {
+    const saved = onAdd(task);
+    if (!saved) notify('error', `Could not save the task "${task.title}". The form still has your input, try again.`);
+    return saved;
+  };
+
   // The focused button is removed together with its task, which would drop focus to <body> and make
   // keyboard and screen reader users start over from the top of the page. Focus moves to the delete
   // button of the next task (or the previous one), so several tasks can be deleted in a row, and to
   // the list heading when no task is left. It moves before the task is removed, while both exist.
+  // When the delete fails, the task and its button stay, and so does focus.
   const deleteTask = (task: Task) => {
+    if (!onDelete(task.id)) {
+      notify('error', `Could not delete "${task.title}". The task is still in the list. Try again.`);
+      return;
+    }
+    // React re-renders after this handler returns, so the focused button still exists here
     const index = tasks.indexOf(task);
     const neighbour = tasks[index + 1] ?? tasks[index - 1];
     const target = neighbour ? deleteButtons.current.get(neighbour.id) : headingRef.current;
     target?.focus();
 
-    onDelete(task.id);
-    setStatus(`Task "${task.title}" deleted.`);
+    notify('success', `Task deleted: ${task.title}`);
   };
 
   return (
     <section aria-labelledby="tasks-heading">
+      {/* Not rendered here: React 19 hoists <title> into <head> and replaces it when the route changes,
+          so each view sets its own document title (WCAG 2.4.2). Checked in e2e/accessibility.spec.ts. */}
       <title>Tasks – Accessible Task Manager</title>
       {/* tabIndex={-1}: focusable from script (after the last task is deleted), but not a Tab stop */}
       <h2 id="tasks-heading" ref={headingRef} tabIndex={-1}>
         Tasks
       </h2>
-      <AddTaskForm onAdd={onAdd} />
+      <AddTaskForm onAdd={addTask} />
       {tasks.length === 0 ? (
         <p>No tasks yet.</p>
       ) : (
@@ -100,7 +135,7 @@ function TaskList({ tasks, onToggle, onToggleImportant, onAdd, onDelete }: TaskL
                     type="button"
                     className={styles.important}
                     aria-pressed={task.important}
-                    onClick={() => onToggleImportant(task.id)}
+                    onClick={() => toggleImportant(task)}
                   >
                     <StarIcon filled={task.important} />
                     Important
@@ -115,7 +150,7 @@ function TaskList({ tasks, onToggle, onToggleImportant, onAdd, onDelete }: TaskL
                   <button
                     type="button"
                     className={`${styles.toggle} ${task.completed ? styles.toggleUndo : ''}`}
-                    onClick={() => onToggle(task.id)}
+                    onClick={() => toggleTask(task)}
                   >
                     {action}
                     <span className="visually-hidden"> – {task.title}</span>
@@ -139,11 +174,7 @@ function TaskList({ tasks, onToggle, onToggleImportant, onAdd, onDelete }: TaskL
           })}
         </ul>
       )}
-      {/* always rendered, so screen readers register the live region before the message appears;
-          visually hidden, because sighted users see the task disappear */}
-      <p role="status" className="visually-hidden">
-        {status}
-      </p>
+      <TaskNotification notification={notification} />
     </section>
   );
 }

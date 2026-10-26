@@ -3,6 +3,11 @@
   line-height: 1.5;
 }
 
+/* room for the sticky task notification: an element scrolled into view by focus ends up above it */
+html {
+  scroll-padding-bottom: 6rem;
+}
+
 body {
   margin: 0;
   padding: 0 2rem;

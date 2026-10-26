@@ -84,7 +84,7 @@ Cel: nazwa każdego przycisku mówi, **co** zrobi i **z którym** zadaniem — t
 
 1. Tab do „Delete task: Add a skip link”, naciśnij Enter.
 
-**Oczekiwane:** czytnik ogłasza „Task "Add a skip link" deleted.” oraz nowy przycisk z fokusem: „Delete task: Check colour contrast”. Fokus nie przeskakuje na początek strony.
+**Oczekiwane:** czytnik ogłasza „Task deleted: Add a skip link” oraz nowy przycisk z fokusem: „Delete task: Check colour contrast”. Fokus nie przeskakuje na początek strony.
 Po usunięciu ostatniego zadania fokus trafia na nagłówek „Tasks”, a pod nim jest „No tasks yet.”.
 
 ## Lista zadań — toggle i disclosure (WCAG 1.4.1, 2.1.1, 4.1.2)
@@ -110,6 +110,38 @@ Wizualnie: wypełniona gwiazdka i ciemne tło gdy włączony, kontur gwiazdki gd
 **Oczekiwane:** przy fokusie czytnik odczytuje „collapsed / zwinięte”, po Enter „expanded / rozwinięte”; fokus zostaje na przycisku.
 Strzałka w dół od razu odczytuje opis zadania (panel jest bezpośrednio po przycisku). Po zwinięciu opis nie jest dostępny w trybie przeglądania.
 Strzałka (chevron) obraca się zgodnie ze stanem.
+
+## Powiadomienia o operacjach na zadaniach (WCAG 1.4.1, 3.3.1, 4.1.3)
+
+Cel: sprawdzić, że czytnik **faktycznie wypowiada** komunikat. Testy Playwright potwierdzają tylko,
+że tekst trafił do regionu `role="status"` / `role="alert"`, który istniał wcześniej — nie to, że NVDA czy VoiceOver go odczytał.
+
+### M10. Ukończenie i cofnięcie ukończenia
+
+1. Tab do „Mark as completed – Check colour contrast”, naciśnij Enter, potem jeszcze raz Enter.
+
+**Oczekiwane:** po pierwszym naciśnięciu czytnik odczytuje nową nazwę przycisku i (uprzejmie, po niej) „Task completed: Check colour contrast”; po drugim „Task marked as incomplete: Check colour contrast”.
+Fokus zostaje na przycisku. Komunikat jest widoczny przy dolnej krawędzi okna.
+
+### M11. Usuwanie kilku zadań z rzędu
+
+1. Tab do „Delete task: Add a skip link”, naciśnij Enter, potem znowu Enter.
+
+**Oczekiwane:** po każdym usunięciu czytnik ogłasza „Task deleted: …” z właściwym tytułem oraz nazwę przycisku, który dostał fokus. Sprawdź, czy jedno ogłoszenie nie ucina drugiego — zanotuj kolejność w rejestrze.
+
+### M12. Błąd zapisu
+
+Przygotowanie: w DevTools → Console wykonaj
+`Storage.prototype.setItem = () => { throw new DOMException('full', 'QuotaExceededError') }`.
+
+1. Tab do „Mark as completed – Check colour contrast”, naciśnij Enter.
+2. Nie ruszając fokusu, naciśnij Enter jeszcze 2 razy (ten sam błąd, identyczny tekst).
+
+**Oczekiwane:** czytnik **od razu** (asertywnie, przerywając) ogłasza „Error: Could not save the change. …”. Stan zadania się nie zmienia, fokus zostaje na przycisku.
+Komunikat błędu różni się od sukcesu bez koloru: prefiks „Error:”, ikona trójkąta zamiast „ptaszka”, gruba belka po lewej. Sprawdź też w trybie wysokiego kontrastu (Windows: Contrast themes).
+Krok 2: **każde** ponowienie jest ogłaszane, mimo identycznej treści. Każdy komunikat to nowy węzeł DOM (`key`), ale to nie
+gwarantuje odczytu — wynik zależy od pary czytnik + przeglądarka. Wykonaj w NVDA + Firefox, NVDA + Chrome i VoiceOver + Safari
+i zapisz w rejestrze, ile z 3 ogłoszeń padło. Jeśli któraś para pomija powtórzenia, rozważ czyszczenie regionu i wstawianie tekstu z opóźnieniem.
 
 ## Fokus klawiatury (WCAG 2.4.7, 2.4.11, 1.4.11)
 

@@ -11,7 +11,8 @@ const PRIORITIES: { value: Priority; label: string }[] = [
 ];
 
 interface AddTaskFormProps {
-  onAdd: (task: NewTask) => void;
+  /** false when the task could not be saved: the form keeps the input, the caller reports the error */
+  onAdd: (task: NewTask) => boolean;
 }
 
 function AddTaskForm({ onAdd }: AddTaskFormProps) {
@@ -58,11 +59,15 @@ function AddTaskForm({ onAdd }: AddTaskFormProps) {
       return;
     }
 
-    onAdd({
+    const saved = onAdd({
       title,
       description: String(data.get('description')).trim(),
       priority: data.get('priority') as Priority,
     });
+    if (!saved) {
+      setStatus('');
+      return;
+    }
     form.reset();
     setTitleError('');
     setAnnouncement(null);

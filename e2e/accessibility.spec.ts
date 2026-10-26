@@ -132,6 +132,25 @@ test('pages have no accessibility violations detected by axe-core', async ({ pag
   }
 });
 
+// WCAG 2.4.2: <title> is rendered by each route component and hoisted into <head> by React 19.
+// The test proves the result in the DOM, not the JSX: one title per view, nothing left in <body>,
+// and the title follows client-side navigation, which does not reload index.html.
+test('each view sets its own document title in <head>, also after client-side navigation', async ({ page }) => {
+  const titlesInBody = () => page.locator('body title');
+
+  await openPage(page, '/tasks', 'Tasks');
+  await expect(page).toHaveTitle('Tasks – Accessible Task Manager');
+  await expect(titlesInBody()).toHaveCount(0);
+
+  await page.getByRole('navigation').getByRole('link', { name: 'About' }).click();
+  await expect(page.getByRole('heading', { level: 2, name: 'About' })).toBeVisible();
+  await expect(page).toHaveTitle('About – Accessible Task Manager');
+  await expect(titlesInBody()).toHaveCount(0);
+
+  await page.getByRole('navigation').getByRole('link', { name: 'Tasks' }).click();
+  await expect(page).toHaveTitle('Tasks – Accessible Task Manager');
+});
+
 test.describe('Keyboard navigation', () => {
   test.beforeEach(async ({ page }) => {
     await openPage(page, '/tasks', 'Tasks');
