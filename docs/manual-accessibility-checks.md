@@ -111,6 +111,34 @@ Wizualnie: wypełniona gwiazdka i ciemne tło gdy włączony, kontur gwiazdki gd
 Strzałka w dół od razu odczytuje opis zadania (panel jest bezpośrednio po przycisku). Po zwinięciu opis nie jest dostępny w trybie przeglądania.
 Strzałka (chevron) obraca się zgodnie ze stanem.
 
+## Powiadomienia o operacjach na zadaniach (WCAG 1.4.1, 3.3.1, 4.1.3)
+
+Cel: sprawdzić, że czytnik **faktycznie wypowiada** komunikat. Testy Playwright potwierdzają tylko,
+że tekst trafił do regionu `role="status"` / `role="alert"`, który istniał wcześniej — nie to, że NVDA czy VoiceOver go odczytał.
+
+### M10. Ukończenie i cofnięcie ukończenia
+
+1. Tab do „Mark as completed – Check colour contrast”, naciśnij Enter, potem jeszcze raz Enter.
+
+**Oczekiwane:** po pierwszym naciśnięciu czytnik odczytuje nową nazwę przycisku i (uprzejmie, po niej) „Task completed: Check colour contrast”; po drugim „Task marked as incomplete: Check colour contrast”.
+Fokus zostaje na przycisku. Komunikat jest widoczny przy dolnej krawędzi okna.
+
+### M11. Usuwanie kilku zadań z rzędu
+
+1. Tab do „Delete task: Add a skip link”, naciśnij Enter, potem znowu Enter.
+
+**Oczekiwane:** po każdym usunięciu czytnik ogłasza „Task deleted: …” z właściwym tytułem oraz nazwę przycisku, który dostał fokus. Sprawdź, czy jedno ogłoszenie nie ucina drugiego — zanotuj kolejność w rejestrze.
+
+### M12. Błąd zapisu
+
+Przygotowanie: w DevTools → Console wykonaj
+`Storage.prototype.setItem = () => { throw new DOMException('full', 'QuotaExceededError') }`.
+
+1. Tab do „Mark as completed – Check colour contrast”, naciśnij Enter.
+
+**Oczekiwane:** czytnik **od razu** (asertywnie, przerywając) ogłasza „Error: Could not save the change. …”. Stan zadania się nie zmienia, fokus zostaje na przycisku.
+Komunikat błędu różni się od sukcesu bez koloru: prefiks „Error:”, ikona trójkąta zamiast „ptaszka”, gruba belka po lewej. Sprawdź też w trybie wysokiego kontrastu (Windows: Contrast themes).
+
 ## Fokus klawiatury (WCAG 2.4.7, 2.4.11, 1.4.11)
 
 Uzupełnienie testów w `e2e/accessibility.spec.ts`, które sprawdzają styl i widoczność fokusu tylko heurystycznie.

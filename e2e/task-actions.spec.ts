@@ -57,7 +57,7 @@ test.describe('Delete button', () => {
       'Add a skip link',
       'Test with a screen reader',
     ]);
-    await expect(listStatus(page)).toHaveText('Task "Check colour contrast" deleted.');
+    await expect(listStatus(page)).toHaveText('Task deleted: Check colour contrast');
   });
 });
 
@@ -158,7 +158,7 @@ test.describe('Keyboard', () => {
     await expect(taskItem(page, 'Add a skip link')).toHaveCount(0);
     // focus is not lost to <body>: the user can keep going from the same place
     await expect(deleteButton(page, 'Check colour contrast')).toBeFocused();
-    await expect(listStatus(page)).toHaveText('Task "Add a skip link" deleted.');
+    await expect(listStatus(page)).toHaveText('Task deleted: Add a skip link');
   });
 
   test('Space deletes the last task and focus moves to the previous task\'s delete button', async ({ page }) => {
@@ -174,7 +174,7 @@ test.describe('Keyboard', () => {
     for (const title of TITLES) {
       await expect(deleteButton(page, title)).toBeFocused();
       await page.keyboard.press('Enter');
-      await expect(listStatus(page)).toHaveText(`Task "${title}" deleted.`);
+      await expect(listStatus(page)).toHaveText(`Task deleted: ${title}`);
     }
 
     await expect(page.getByText('No tasks yet.')).toBeVisible();
@@ -197,7 +197,7 @@ test.describe('axe-core', () => {
   test('the page has no violations after toggling and deleting tasks', async ({ page }) => {
     await taskItem(page, 'Check colour contrast').getByRole('button', { name: /^Mark as/ }).click();
     await deleteButton(page, 'Add a skip link').click();
-    await expect(listStatus(page)).toHaveText('Task "Add a skip link" deleted.');
+    await expect(listStatus(page)).toHaveText('Task deleted: Add a skip link');
 
     const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
 

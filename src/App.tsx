@@ -5,24 +5,36 @@ import Main from './components/Main/Main';
 import Footer from './components/Footer/Footer';
 import TaskList from './components/TaskList/TaskList';
 import About from './components/About/About';
-import { tasks as initialTasks } from './data/tasks';
-import type { NewTask } from './types/task';
+import { loadTasks, saveTasks } from './data/taskStorage';
+import type { NewTask, Task } from './types/task';
 
 function App() {
-  const [tasks, setTasks] = useState(initialTasks);
+  const [tasks, setTasks] = useState(loadTasks);
+
+  // The change is saved first and shown only when the save succeeded, so the screen never shows a
+  // state that is not stored. The result tells the task list which notification to show.
+  const commit = (next: Task[]): boolean => {
+    try {
+      saveTasks(next);
+    } catch {
+      return false;
+    }
+    setTasks(next);
+    return true;
+  };
 
   const toggleTask = (id: number) =>
-    setTasks((current) => current.map((task) => (task.id === id ? { ...task, completed: !task.completed } : task)));
+    commit(tasks.map((task) => (task.id === id ? { ...task, completed: !task.completed } : task)));
 
   const toggleImportant = (id: number) =>
-    setTasks((current) => current.map((task) => (task.id === id ? { ...task, important: !task.important } : task)));
+    commit(tasks.map((task) => (task.id === id ? { ...task, important: !task.important } : task)));
 
-  const deleteTask = (id: number) => setTasks((current) => current.filter((task) => task.id !== id));
+  const deleteTask = (id: number) => commit(tasks.filter((task) => task.id !== id));
 
   const addTask = (task: NewTask) =>
-    setTasks((current) => [
-      ...current,
-      { ...task, id: Math.max(0, ...current.map(({ id }) => id)) + 1, completed: false, important: false },
+    commit([
+      ...tasks,
+      { ...task, id: Math.max(0, ...tasks.map(({ id }) => id)) + 1, completed: false, important: false },
     ]);
 
   return (
