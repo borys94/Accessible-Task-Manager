@@ -4,7 +4,9 @@ import { AXE_TAGS } from './helpers/axe';
 
 // These tests check WHERE focus goes, which axe cannot: axe sees one static state and has no idea
 // which element was focused before or which one is the logical next step for the user.
-// Saves are asynchronous (~200 ms), so every assertion waits for the outcome, never for a timeout.
+// Saves are asynchronous (setTimeout in src/data/taskStorage.ts). Tests that check the state DURING a
+// save stop the page clock first, so the save cannot finish until the test calls finishSaves() -
+// no assertion depends on how fast the machine is.
 
 const TITLES = ['Add a skip link', 'Check colour contrast', 'Test with a screen reader'];
 
@@ -33,6 +35,18 @@ async function breakStorage(page: Page) {
 async function openTasks(page: Page) {
   await page.goto('/tasks');
   await expect(page.getByRole('heading', { level: 2, name: 'Tasks' })).toBeVisible();
+}
+
+/** Opens the task list with the page's timers frozen: started saves stay pending. */
+async function openTasksWithPausedClock(page: Page) {
+  await page.clock.install();
+  await openTasks(page);
+  await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1000);
+}
+
+/** Lets the pending saves finish (longer than the simulated save delay). */
+async function finishSaves(page: Page) {
+  await page.clock.runFor(1000);
 }
 
 test.describe('Focus after delete', () => {
@@ -68,14 +82,21 @@ test.describe('Focus after delete', () => {
     await expect(page.getByRole('button', { name: 'Add task' })).toBeFocused();
   });
 
-  test('while the delete is saving, focus stays on the button and the task stays in the list', async ({ page }) => {
+});
+
+test.describe('Focus while a delete is saving', () => {
+  test.beforeEach(async ({ page }) => openTasksWithPausedClock(page));
+
+  test('focus stays on the button and the task stays in the list until the save ends', async ({ page }) => {
     await deleteButton(page, 'Add a skip link').focus();
     await page.keyboard.press('Enter');
 
-    // checked right after the key press, before the save finished: nothing moved early
-    await expect(deleteButton(page, 'Add a skip link')).toBeFocused({ timeout: 50 });
-    await expect(taskItem(page, 'Add a skip link')).toHaveCount(1, { timeout: 50 });
+    // the save cannot have finished: nothing may move early
+    await expect(deleteButton(page, 'Add a skip link')).toBeFocused();
+    await expect(taskItem(page, 'Add a skip link')).toHaveCount(1);
 
+    await finishSaves(page);
+    await expect(taskItem(page, 'Add a skip link')).toHaveCount(0);
     await expect(deleteButton(page, 'Check colour contrast')).toBeFocused();
   });
 
@@ -87,6 +108,7 @@ test.describe('Focus after delete', () => {
     const next = page.getByRole('button', { name: 'Details – Check colour contrast', exact: true });
     await expect(next).toBeFocused();
 
+    await finishSaves(page);
     await expect(status(page)).toHaveText('Task deleted: Add a skip link');
     await expect(next).toBeFocused();
   });
@@ -144,6 +166,60 @@ test.describe('Focus in edit mode', () => {
     await expect(title).toHaveAccessibleDescription(
       'Error: Task title must be at least 3 characters. Between 3 and 100 characters.',
     );
+  });
+});
+
+// The edit form cannot be cancelled while saving: the outcome would be hidden from the user.
+test.describe('Edit form while saving', () => {
+  test.beforeEach(async ({ page }) => openTasksWithPausedClock(page));
+
+  test('shows "Saving changes…", ignores Escape and Cancel, and keeps focus', async ({ page }) => {
+    await editButton(page, 'Check colour contrast').click();
+    const form = editForm(page, 'Check colour contrast');
+    const title = titleField(page, 'Check colour contrast');
+    await title.fill('Check focus contrast');
+    await title.press('Enter');
+
+    // a status message, visible and in a live region; focus is not moved to it
+    await expect(form.getByRole('status')).toHaveText('Saving changes…');
+    await expect(form.getByRole('status')).toBeVisible();
+    await expect(title).toBeFocused();
+    await expect(title).toHaveAttribute('readonly');
+
+    // Escape and Cancel do not close the form while the save is running
+    await page.keyboard.press('Escape');
+    const cancel = form.getByRole('button', { name: 'Cancel' });
+    await expect(cancel).toHaveAttribute('aria-disabled', 'true');
+    await cancel.focus();
+    await page.keyboard.press('Enter');
+    await expect(form).toBeVisible();
+    await expect(cancel).toBeFocused();
+
+    // the outcome decides: saved, so the form closes and focus returns to Edit
+    await finishSaves(page);
+    await expect(editButton(page, 'Check focus contrast')).toBeFocused();
+    await expect(status(page)).toHaveText('Task updated: Check focus contrast');
+  });
+});
+
+test.describe('Edit form after a failed save', () => {
+  test.beforeEach(async ({ page }) => {
+    await breakStorage(page);
+    await openTasks(page);
+  });
+
+  test('can be cancelled again once the save has failed', async ({ page }) => {
+    await editButton(page, 'Check colour contrast').click();
+    const form = editForm(page, 'Check colour contrast');
+    await titleField(page, 'Check colour contrast').press('Enter');
+
+    await expect(alert(page)).not.toBeEmpty();
+    await expect(form.getByRole('status')).toBeEmpty();
+    await expect(form.getByRole('button', { name: 'Cancel' })).not.toHaveAttribute('aria-disabled');
+    await expect(titleField(page, 'Check colour contrast')).not.toHaveAttribute('readonly');
+
+    await page.keyboard.press('Escape');
+    await expect(editButton(page, 'Check colour contrast')).toBeFocused();
   });
 });
 

@@ -160,6 +160,41 @@ describe('Focus in edit mode', () => {
   });
 });
 
+describe('Edit form while saving', () => {
+  it('cannot be cancelled until the save ends; then the outcome is applied', async () => {
+    const { save, resolve } = deferredSave();
+    const { user } = setup(save);
+    await user.click(taskButton('Edit', 'Second'));
+    const form = screen.getByRole('form', { name: 'Second' });
+    const title = within(form).getByRole('textbox', { name: 'Title (required)' });
+    await user.clear(title);
+    await user.type(title, 'Renamed{Enter}');
+
+    expect(within(form).getByRole('status')).toHaveTextContent('Saving changes…');
+    await user.keyboard('{Escape}');
+    await user.click(within(form).getByRole('button', { name: 'Cancel' }));
+    expect(form).toBeInTheDocument();
+    expect(title).toHaveAttribute('readonly');
+
+    resolve(true);
+    await waitFor(() => expect(taskButton('Edit', 'Renamed')).toHaveFocus());
+  });
+
+  it('a second Save while saving does not start another save', async () => {
+    const { save, resolve } = deferredSave();
+    const { user } = setup(save);
+    await user.click(taskButton('Edit', 'Second'));
+    const saveButton = screen.getByRole('button', { name: 'Save' });
+
+    await user.click(saveButton);
+    await user.click(saveButton);
+    resolve(true);
+
+    await waitFor(() => expect(taskButton('Edit', 'Second')).toHaveFocus());
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('Focus is not moved by rerenders', () => {
   const noop = async () => true;
   const renderList = (tasks: Task[]) => (

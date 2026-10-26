@@ -20,6 +20,9 @@ interface TaskListProps {
   onDelete: (id: number) => Promise<boolean>;
 }
 
+/** Result of a task operation; a boolean cannot tell "not saved" from "not even started". */
+type Outcome = 'saved' | 'failed' | 'skipped';
+
 const PRIORITY_LABELS: Record<Priority, string> = { low: 'Low', medium: 'Medium', high: 'High' };
 
 /** Keeps a map of task id -> element up to date from a ref callback. */
@@ -63,12 +66,12 @@ function TaskList({ tasks, onToggle, onToggleImportant, onUpdate, onAdd, onDelet
   const notify = (type: Notification['type'], text: string) =>
     setNotification((previous) => ({ type, text, id: (previous?.id ?? 0) + 1 }));
 
-  /** Runs one save per task at a time; resolves to undefined when the press was ignored. */
-  const once = async (taskId: number, operation: () => Promise<boolean>) => {
-    if (pending.current.has(taskId)) return undefined;
+  /** Runs one save per task at a time. "skipped": another save of this task was in progress. */
+  const once = async (taskId: number, operation: () => Promise<boolean>): Promise<Outcome> => {
+    if (pending.current.has(taskId)) return 'skipped';
     pending.current.add(taskId);
     try {
-      return await operation();
+      return (await operation()) ? 'saved' : 'failed';
     } finally {
       pending.current.delete(taskId);
     }
@@ -78,18 +81,18 @@ function TaskList({ tasks, onToggle, onToggleImportant, onUpdate, onAdd, onDelet
   // which task each one was about. On failure nothing changes and focus is not touched: the user is
   // still on the control they used and can retry with the same key (keyboard context is kept).
   const toggleTask = async (task: Task) => {
-    const saved = await once(task.id, () => onToggle(task.id));
-    if (saved === false) {
+    const outcome = await once(task.id, () => onToggle(task.id));
+    if (outcome === 'failed') {
       notify('error', `Could not save the change. "${task.title}" is still marked as ${task.completed ? 'completed' : 'to do'}. Try again.`);
-    } else if (saved) {
+    } else if (outcome === 'saved') {
       notify('success', task.completed ? `Task marked as incomplete: ${task.title}` : `Task completed: ${task.title}`);
     }
   };
 
   // aria-pressed already announces the new state, so a success message would only repeat it
   const toggleImportant = async (task: Task) => {
-    const saved = await once(task.id, () => onToggleImportant(task.id));
-    if (saved === false) {
+    const outcome = await once(task.id, () => onToggleImportant(task.id));
+    if (outcome === 'failed') {
       notify('error', `Could not save the change. "${task.title}" is still ${task.important ? '' : 'not '}marked as important. Try again.`);
     }
   };
@@ -117,16 +120,13 @@ function TaskList({ tasks, onToggle, onToggleImportant, onUpdate, onAdd, onDelet
 
   // On failure the form stays open with the user's input and focus stays on Save, so Enter retries.
   const saveEdit = async (task: Task, changes: Pick<Task, 'title' | 'description'>) => {
-    const saved = await once(task.id, () => onUpdate(task.id, changes));
-    if (saved === false) {
+    const outcome = await once(task.id, () => onUpdate(task.id, changes));
+    if (outcome === 'failed') {
       notify('error', `Could not save your changes to "${task.title}". The form still has your input. Try again.`);
-      return false;
-    }
-    if (saved) {
+    } else if (outcome === 'saved') {
       stopEditing(task);
       notify('success', `Task updated: ${changes.title}`);
     }
-    return true;
   };
 
   // The deleted task takes its focused button with it, which would drop focus to <body> and make
@@ -140,12 +140,11 @@ function TaskList({ tasks, onToggle, onToggleImportant, onUpdate, onAdd, onDelet
   // does focus.
   const deleteTask = async (task: Task) => {
     const listBefore = tasks;
-    const saved = await once(task.id, () => onDelete(task.id));
-    if (saved === false) {
+    const outcome = await once(task.id, () => onDelete(task.id));
+    if (outcome === 'failed') {
       notify('error', `Could not delete "${task.title}". The task is still in the list. Try again.`);
-      return;
     }
-    if (!saved) return;
+    if (outcome !== 'saved') return;
 
     if (document.activeElement === document.body || document.activeElement === null) {
       successorOf(listBefore, task)?.focus();

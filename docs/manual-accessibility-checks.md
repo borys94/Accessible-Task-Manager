@@ -156,6 +156,12 @@ Testy automatyczne sprawdzają, **gdzie** jest fokus. Tutaj sprawdź, **co czytn
 Po Escape — przycisk „Edit – Check colour contrast”. Po zapisie — przycisk „Edit – <nowy tytuł>” i komunikat „Task updated: …”.
 Czytnik nie odczytuje „dokument”/„strona” ani nie wraca na początek strony.
 
+Zapis trwa ok. 200 ms — za krótko, by sprawdzić go ręcznie. Throttling sieci w DevTools nic nie da (zapis nie idzie przez sieć),
+więc najpierw spowolnij go w Console: `const t = window.setTimeout; window.setTimeout = (f, ms, ...a) => t(f, ms * 20, ...a)`.
+Potem: zapisz zmianę i od razu naciśnij Escape, Tab do „Cancel”, Enter.
+**Oczekiwane:** czytnik ogłasza „Saving changes…”; Escape nic nie robi; „Cancel” jest odczytywany jako niedostępny (NVDA: *unavailable*, VoiceOver: *dimmed*);
+fokus nie skacze. Po zapisie fokus wraca na „Edit – <nowy tytuł>”.
+
 ### M14. Usuwanie ostatniego zadania
 
 1. Usuń wszystkie zadania klawiaturą (Enter na „Delete task: …”).
