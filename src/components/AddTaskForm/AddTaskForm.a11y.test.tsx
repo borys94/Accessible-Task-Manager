@@ -9,7 +9,7 @@ import AddTaskForm from './AddTaskForm';
 // @axe-core/playwright scans in e2e/add-task-form.spec.ts, which run in a real browser.
 describe('AddTaskForm accessibility (jest-axe)', () => {
   it('has no violations in its initial state', async () => {
-    const { container } = render(<AddTaskForm onAdd={() => true} />);
+    const { container } = render(<AddTaskForm onAdd={async () => true} />);
 
     expect(await axe(container)).toHaveNoViolations();
   });
@@ -19,7 +19,7 @@ describe('AddTaskForm accessibility (jest-axe)', () => {
     ['a too short title', 'ab', 'Error: Task title must be at least 3 characters.'],
   ])('has no violations with an active error for %s', async (_, value, error) => {
     const user = userEvent.setup();
-    const { container } = render(<AddTaskForm onAdd={() => true} />);
+    const { container } = render(<AddTaskForm onAdd={async () => true} />);
     const title = screen.getByRole('textbox', { name: 'Task title (required)' });
 
     if (value) await user.type(title, value);

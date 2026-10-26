@@ -186,11 +186,11 @@ test.describe('Details disclosure button', () => {
 });
 
 test.describe('Keyboard order within a task', () => {
-  test('Details, Important, Mark as…, Delete', async ({ page }) => {
+  test('Details, Important, Mark as…, Edit, Delete', async ({ page }) => {
     const title = 'Check colour contrast';
     await detailsButton(page, title).focus();
 
-    for (const name of [`Important – ${title}`, `Mark as completed – ${title}`, `Delete task: ${title}`]) {
+    for (const name of [`Important – ${title}`, `Mark as completed – ${title}`, `Edit – ${title}`, `Delete task: ${title}`]) {
       await page.keyboard.press('Tab');
       await expect(page.locator(':focus')).toHaveAccessibleName(name);
     }

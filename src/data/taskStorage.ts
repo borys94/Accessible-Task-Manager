@@ -17,10 +17,15 @@ export function loadTasks(): Task[] {
   return initialTasks;
 }
 
+// Simulated network latency: localStorage itself is synchronous, but a real backend is not. The delay
+// makes the UI really go through the "saving" state, so focus handling is built and tested for it.
+const SAVE_DELAY_MS = 200;
+
 /**
- * Throws when the tasks cannot be saved: storage full (QuotaExceededError), disabled by the
+ * Rejects when the tasks cannot be saved: storage full (QuotaExceededError), disabled by the
  * browser or its settings. Callers keep the previous state and tell the user the change was not saved.
  */
-export function saveTasks(tasks: Task[]): void {
+export async function saveTasks(tasks: Task[]): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, SAVE_DELAY_MS));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
 }

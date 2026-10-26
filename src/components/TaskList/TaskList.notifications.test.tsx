@@ -1,43 +1,18 @@
-import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import type { Task } from '../../types/task';
-import TaskList from './TaskList';
+import { TaskListHarness, taskButton } from './TaskList.harness';
 
 const TASKS: Task[] = [
   { id: 1, title: 'Write docs', description: '', priority: 'low', completed: false, important: false },
   { id: 2, title: 'Fix bug', description: '', priority: 'high', completed: true, important: false },
 ];
 
-/** TaskList with real state, like App, but with a save that succeeds or fails on demand. */
-function Harness({ save }: { save: () => boolean }) {
-  const [tasks, setTasks] = useState(TASKS);
-  const commit = (next: Task[]) => {
-    if (!save()) return false;
-    setTasks(next);
-    return true;
-  };
-  return (
-    <TaskList
-      tasks={tasks}
-      onToggle={(id) => commit(tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)))}
-      onToggleImportant={(id) => commit(tasks.map((t) => (t.id === id ? { ...t, important: !t.important } : t)))}
-      onAdd={() => save()}
-      onDelete={(id) => commit(tasks.filter((t) => t.id !== id))}
-    />
-  );
-}
-
-// jsdom drops the space before the visually hidden " – <title>" part of the name (browsers keep it),
-// so the space is optional here; the exact name is checked in the Playwright tests
-const taskButton = (action: string, title: string) =>
-  screen.getByRole('button', { name: new RegExp(`^${action}\\s?– ${title}$`) });
-
 function setup(save = vi.fn(() => true)) {
   const user = userEvent.setup();
-  const { container } = render(<Harness save={save} />);
+  const { container } = render(<TaskListHarness initialTasks={TASKS} save={save} />);
   return {
     user,
     container,

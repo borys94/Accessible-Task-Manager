@@ -99,7 +99,7 @@ test.describe('Mark as completed / to do button', () => {
   // textContent would still look unique.
   test('every button in the list has a non-empty, unique accessible name', async ({ page }) => {
     const buttons = await taskList(page).getByRole('button').all();
-    expect(buttons).toHaveLength(TITLES.length * 4); // details, important, mark as, delete
+    expect(buttons).toHaveLength(TITLES.length * 5); // details, important, mark as, edit, delete
 
     const names = await Promise.all(buttons.map(accessibleName));
     for (const name of names) expect(name).not.toBe('');
@@ -145,8 +145,10 @@ test.describe('Keyboard', () => {
     await expect(button).toBeFocused();
   });
 
-  test('the delete button is reached with Tab right after the toggle of the same task', async ({ page }) => {
+  test('the delete button is reached with Tab after the toggle and edit buttons of the same task', async ({ page }) => {
     await taskItem(page, 'Check colour contrast').getByRole('button', { name: /^Mark as/ }).focus();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: 'Edit – Check colour contrast', exact: true })).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(deleteButton(page, 'Check colour contrast')).toBeFocused();
   });
@@ -169,7 +171,7 @@ test.describe('Keyboard', () => {
     await expect(deleteButton(page, 'Check colour contrast')).toBeFocused();
   });
 
-  test('deleting every task with the keyboard ends on the list heading, not on <body>', async ({ page }) => {
+  test('deleting every task with the keyboard ends on "Add task", not on <body>', async ({ page }) => {
     await deleteButton(page, TITLES[0]).focus();
     for (const title of TITLES) {
       await expect(deleteButton(page, title)).toBeFocused();
@@ -178,9 +180,8 @@ test.describe('Keyboard', () => {
     }
 
     await expect(page.getByText('No tasks yet.')).toBeVisible();
-    await expect(page.getByRole('heading', { level: 2, name: 'Tasks' })).toBeFocused();
-    // the heading is focusable from script only, it does not become an extra Tab stop
-    await expect(page.getByRole('heading', { level: 2, name: 'Tasks' })).toHaveAttribute('tabindex', '-1');
+    // the next useful action on an empty list is adding a task
+    await expect(page.getByRole('button', { name: 'Add task' })).toBeFocused();
   });
 });
 

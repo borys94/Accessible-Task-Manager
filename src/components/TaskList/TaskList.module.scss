@@ -56,6 +56,18 @@
   cursor: pointer;
 }
 
+.edit {
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+  border: 2px solid #3c4043;
+  border-radius: 0.375rem;
+  background: #fff;
+  color: #3c4043;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .toggleUndo {
   border-color: #5f6368;
   color: #3c4043;

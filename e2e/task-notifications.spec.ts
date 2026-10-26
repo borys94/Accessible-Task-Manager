@@ -73,7 +73,10 @@ test.describe('Success notifications', () => {
 
   test('the change is really saved: it is still there after a reload', async ({ page }) => {
     await toggleButton(page, 'Check colour contrast').click();
+    await expect(notificationStatus(page)).toHaveText('Task completed: Check colour contrast');
     await deleteButton(page, 'Add a skip link').click();
+    // the save is asynchronous: reload only after it finished
+    await expect(notificationStatus(page)).toHaveText('Task deleted: Add a skip link');
     await page.reload();
 
     await expect(taskItem(page, 'Check colour contrast')).toContainText('Status: Completed');
