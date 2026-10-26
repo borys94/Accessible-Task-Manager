@@ -82,6 +82,8 @@ function TaskList({ tasks, onToggle, onToggleImportant, onAdd, onDelete }: TaskL
 
   return (
     <section aria-labelledby="tasks-heading">
+      {/* Not rendered here: React 19 hoists <title> into <head> and replaces it when the route changes,
+          so each view sets its own document title (WCAG 2.4.2). Checked in e2e/accessibility.spec.ts. */}
       <title>Tasks – Accessible Task Manager</title>
       {/* tabIndex={-1}: focusable from script (after the last task is deleted), but not a Tab stop */}
       <h2 id="tasks-heading" ref={headingRef} tabIndex={-1}>

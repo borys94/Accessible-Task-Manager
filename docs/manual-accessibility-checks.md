@@ -84,7 +84,7 @@ Cel: nazwa każdego przycisku mówi, **co** zrobi i **z którym** zadaniem — t
 
 1. Tab do „Delete task: Add a skip link”, naciśnij Enter.
 
-**Oczekiwane:** czytnik ogłasza „Task "Add a skip link" deleted.” oraz nowy przycisk z fokusem: „Delete task: Check colour contrast”. Fokus nie przeskakuje na początek strony.
+**Oczekiwane:** czytnik ogłasza „Task deleted: Add a skip link” oraz nowy przycisk z fokusem: „Delete task: Check colour contrast”. Fokus nie przeskakuje na początek strony.
 Po usunięciu ostatniego zadania fokus trafia na nagłówek „Tasks”, a pod nim jest „No tasks yet.”.
 
 ## Lista zadań — toggle i disclosure (WCAG 1.4.1, 2.1.1, 4.1.2)
@@ -135,9 +135,13 @@ Przygotowanie: w DevTools → Console wykonaj
 `Storage.prototype.setItem = () => { throw new DOMException('full', 'QuotaExceededError') }`.
 
 1. Tab do „Mark as completed – Check colour contrast”, naciśnij Enter.
+2. Nie ruszając fokusu, naciśnij Enter jeszcze 2 razy (ten sam błąd, identyczny tekst).
 
 **Oczekiwane:** czytnik **od razu** (asertywnie, przerywając) ogłasza „Error: Could not save the change. …”. Stan zadania się nie zmienia, fokus zostaje na przycisku.
 Komunikat błędu różni się od sukcesu bez koloru: prefiks „Error:”, ikona trójkąta zamiast „ptaszka”, gruba belka po lewej. Sprawdź też w trybie wysokiego kontrastu (Windows: Contrast themes).
+Krok 2: **każde** ponowienie jest ogłaszane, mimo identycznej treści. Każdy komunikat to nowy węzeł DOM (`key`), ale to nie
+gwarantuje odczytu — wynik zależy od pary czytnik + przeglądarka. Wykonaj w NVDA + Firefox, NVDA + Chrome i VoiceOver + Safari
+i zapisz w rejestrze, ile z 3 ogłoszeń padło. Jeśli któraś para pomija powtórzenia, rozważ czyszczenie regionu i wstawianie tekstu z opóźnieniem.
 
 ## Fokus klawiatury (WCAG 2.4.7, 2.4.11, 1.4.11)
 

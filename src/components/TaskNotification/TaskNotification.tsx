@@ -17,8 +17,13 @@ interface TaskNotificationProps {
  * is often not announced. Focus is never moved here - the user stays on the control they used.
  *
  * - success: role="status" (polite), waits until the screen reader finishes what it is reading
- * - error: role="alert" (assertive), the change was NOT saved and the screen did not change, so the
- *   user must hear it right away
+ * - error: role="alert" (assertive). An error does not need assertive by itself; here it does because
+ *   the user has just acted and assumes the change happened, while it was NOT saved and the screen
+ *   did not change - if they move on, they lose work without knowing. It is a reply to their own
+ *   action, one at a time, so it does not interrupt unrelated speech. A failure the user did not
+ *   trigger (e.g. a background autosave) would go to the status region instead.
+ * A new key does not guarantee that a repeated text is announced again in every screen reader:
+ * verified manually (docs/manual-accessibility-checks.md, M12).
  *
  * Success and error differ in text ("Error:" prefix), icon shape and border, not only in colour (WCAG 1.4.1).
  */
